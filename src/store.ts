@@ -43,9 +43,11 @@ export function useStored<T>(key: string, fallback: T): [T, (v: T) => void] {
 export interface Settings {
   naming: 'it' | 'en';
   autoAdvance: boolean;
+  /** Durata abituale della sessione di oggi, in minuti. */
+  sessionMinutes: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { naming: 'it', autoAdvance: true };
+export const DEFAULT_SETTINGS: Settings = { naming: 'it', autoAdvance: true, sessionMinutes: 20 };
 
 export const useSettings = () => useStored<Settings>('settings', DEFAULT_SETTINGS);
 

@@ -1,4 +1,5 @@
 import { type FretMark, Fretboard, Legend, chordToneKind } from '../components/Fretboard';
+import { PageHead } from '../components/Layout';
 import { Radio } from '../components/Shell';
 import { Staff } from '../components/Staff';
 import { ScaleExplain } from '../exercises/ScaleQuiz';
@@ -134,7 +135,7 @@ function ExploreScales() {
       </section>
 
       <section class="panel">
-        <h2 class="section">Sul manico</h2>
+        <h2 class="panel-title">Sul manico</h2>
         <Radio
           label="Etichette"
           options={[
@@ -169,13 +170,8 @@ function ExploreScales() {
 export function Explore() {
   const [tab, setTab] = useStored<'scales' | 'chords'>('explore.tab', 'scales');
   return (
-    <div class="exercise">
-      <header class="ex-head">
-        <a href="#/" class="back" aria-label="Torna alla home">
-          ‹
-        </a>
-        <h1>Esplora</h1>
-      </header>
+    <div class="page">
+      <PageHead title="Esplora" sub="Scale e accordi sul pentagramma e sul manico" />
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'scales'} class={tab === 'scales' ? 'on' : ''} onClick={() => setTab('scales')}>
           Scale

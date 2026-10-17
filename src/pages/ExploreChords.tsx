@@ -125,7 +125,7 @@ export function ExploreChords() {
       </section>
 
       <section class="panel">
-        <h2 class="section">Sul manico</h2>
+        <h2 class="panel-title">Sul manico</h2>
         {cagedOk ? (
           <Radio
             label="Vista"

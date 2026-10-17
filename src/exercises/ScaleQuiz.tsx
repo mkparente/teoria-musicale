@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { Choices, NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
 import { Staff } from '../components/Staff';
-import { useSettings, useStored } from '../store';
+import { useSettings } from '../store';
 import { tiered } from '../srs/srs';
 import { type Naming, type PitchClass, enharmonic, noteName, parsePcKey, pcKey, samePitchClass } from '../theory/notes';
 import {
@@ -29,7 +29,7 @@ import {
   tonicFromSignature,
   tonicsFor,
 } from '../theory/scales';
-import { type Outcome, useExercise } from './useExercise';
+import { type ExerciseProps, type Outcome, useExercise, useExerciseConfig } from './useExercise';
 
 type Kind = 'deg' | 'which' | 'sig' | 'key' | 'rel' | 'write';
 
@@ -48,7 +48,7 @@ interface Config {
   maxAcc: number;
 }
 
-const DEFAULT: Config = { kinds: ['deg', 'which', 'sig', 'key', 'rel', 'write'], scales: [...SCALE_TYPES], maxAcc: 7 };
+export const DEFAULT: Config = { kinds: ['deg', 'which', 'sig', 'key', 'rel', 'write'], scales: [...SCALE_TYPES], maxAcc: 7 };
 
 export const PREFIX = 'sq:';
 
@@ -129,11 +129,11 @@ export function describe(id: string, naming: Naming): string {
   }
 }
 
-export function ScaleQuiz() {
-  const [config, setConfig] = useStored<Config>('cfg.scale', DEFAULT);
-  const ex = useExercise(() => buildPool(config), parse, JSON.stringify(config));
+export function ScaleQuiz(props: ExerciseProps<Config>) {
+  const [config, setConfig] = useExerciseConfig('cfg.scale', DEFAULT, props.config);
+  const ex = useExercise(() => buildPool(config), parse, JSON.stringify(config), props);
 
-  const settings = (
+  const settings = setConfig && (
     <>
       <Toggles label="Domande" options={KINDS} value={config.kinds} onChange={(kinds) => setConfig({ ...config, kinds })} />
       <Toggles
@@ -152,7 +152,7 @@ export function ScaleQuiz() {
   );
 
   return (
-    <Shell title="Quiz sulle scale" session={ex.session} settings={settings}>
+    <Shell title={props.title ?? 'Scale'} back={props.back} session={ex.session} settings={settings} embedded={ex.embedded}>
       {ex.error && <p class="empty">{ex.error}</p>}
       {ex.current && (
         <QuestionView key={ex.current.n} q={ex.current.q} outcome={ex.outcome} finish={ex.finish} next={ex.next} />

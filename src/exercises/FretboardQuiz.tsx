@@ -2,11 +2,11 @@ import { useState } from 'preact/hooks';
 import { type FretMark, Fretboard } from '../components/Fretboard';
 import { NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
-import { useSettings, useStored } from '../store';
+import { useSettings } from '../store';
 import { tiered } from '../srs/srs';
 import { type FretPos, type GuitarString, STRINGS, STRING_NAMES, positionsOf, samePos, semitoneAt } from '../theory/guitar';
 import { type Naming, type PitchClass, commonSpellings, noteName, pitchClass } from '../theory/notes';
-import { type Outcome, useExercise } from './useExercise';
+import { type ExerciseProps, type Outcome, useExercise, useExerciseConfig } from './useExercise';
 
 type Kind = 'find' | 'str' | 'name';
 
@@ -17,7 +17,7 @@ interface Config {
   accidentals: boolean;
 }
 
-const DEFAULT: Config = { kind: 'str', maxFret: 12, strings: [...STRINGS], accidentals: false };
+export const DEFAULT: Config = { kind: 'str', maxFret: 12, strings: [...STRINGS], accidentals: false };
 const NATURALS = [0, 2, 4, 5, 7, 9, 11];
 const SHARPS = [1, 3, 6, 8, 10];
 
@@ -76,11 +76,11 @@ export function describe(id: string, naming: Naming): string {
   return `nota al tasto ${b} della ${STRING_NAMES[Number(a) as GuitarString]}`;
 }
 
-export function FretboardQuiz() {
-  const [config, setConfig] = useStored<Config>('cfg.fret', DEFAULT);
-  const ex = useExercise(() => buildPool(config), parse, JSON.stringify(config));
+export function FretboardQuiz(props: ExerciseProps<Config>) {
+  const [config, setConfig] = useExerciseConfig('cfg.fret', DEFAULT, props.config);
+  const ex = useExercise(() => buildPool(config), parse, JSON.stringify(config), props);
 
-  const settings = (
+  const settings = setConfig && (
     <>
       <Radio
         label="Esercizio"
@@ -117,7 +117,7 @@ export function FretboardQuiz() {
   );
 
   return (
-    <Shell title="Note sul manico" session={ex.session} settings={settings}>
+    <Shell title={props.title ?? 'Note sul manico'} back={props.back} session={ex.session} settings={settings} embedded={ex.embedded}>
       {ex.error && <p class="empty">{ex.error}</p>}
       {ex.current && (
         <QuestionView

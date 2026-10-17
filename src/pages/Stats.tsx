@@ -1,41 +1,48 @@
 import { useState } from 'preact/hooks';
-import { describe as describeChords } from '../exercises/ChordFretQuiz';
-import { describe as describeFret } from '../exercises/FretboardQuiz';
-import { describe as describeRead } from '../exercises/ReadingQuiz';
-import { describe as describeScale } from '../exercises/ScaleQuiz';
-import { describe as describeTriad } from '../exercises/TriadQuiz';
+import { PageHead } from '../components/Layout';
+import { EXERCISE_LIST, GUITAR_PREFIX } from '../exercises/registry';
+import { UNITS } from '../program/curriculum';
+import { UNIT_THRESHOLD, unitProgress, useProgram } from '../program/progress';
 import { MASTERED_BOX, getDb, resetPrefix } from '../srs/srs';
 import { type Naming } from '../theory/notes';
-import { useSettings } from '../store';
+import { load, useSettings } from '../store';
+
+const guitarTitle = (id: string) => {
+  const key = id.slice(GUITAR_PREFIX.length);
+  for (const u of UNITS) for (const a of u.activities) if (a.type === 'guitar' && a.id === key) return a.title;
+  return key;
+};
 
 const GROUPS: { prefix: string; title: string; describe: (id: string, n: Naming) => string }[] = [
-  { prefix: 'sq:', title: 'Quiz sulle scale', describe: describeScale },
-  { prefix: 'tr:', title: 'Triadi', describe: describeTriad },
-  { prefix: 'fb:', title: 'Note sul manico', describe: describeFret },
-  { prefix: 'ch:', title: 'Accordi sul manico', describe: describeChords },
-  { prefix: 'rd:', title: 'Lettura delle note', describe: describeRead },
+  ...EXERCISE_LIST.map((e) => ({ prefix: e.prefix, title: e.title, describe: e.describe })),
+  { prefix: GUITAR_PREFIX, title: 'Chitarra in mano', describe: guitarTitle },
 ];
 
 export function Stats() {
   const [{ naming }] = useSettings();
   const [, refresh] = useState(0);
+  const [program] = useProgram();
+  const log = load<Record<string, { minutes: number }>>('log', {});
   const db = getDb();
   const now = Date.now();
 
   return (
-    <div class="exercise">
-      <header class="ex-head">
-        <a href="#/" class="back" aria-label="Torna alla home">
-          ‹
-        </a>
-        <h1>Progressi</h1>
-      </header>
+    <div class="page">
+      <PageHead title="Progressi" />
+      <section class="panel">
+        <h2 class="panel-title">Programma</h2>
+        <div class="stat-grid">
+          <Stat n={`${UNITS.filter((u) => program.done.includes(u.id) || unitProgress(u) >= UNIT_THRESHOLD).length} / ${UNITS.length}`} label="unità acquisite" />
+          <Stat n={Object.keys(log).length} label="giorni di studio" />
+          <Stat n={`${Math.round(Object.values(log).reduce((s, d) => s + d.minutes, 0) / 60)} h`} label="nelle sessioni guidate" />
+        </div>
+      </section>
       {GROUPS.map((g) => {
         const items = Object.entries(db).filter(([k]) => k.startsWith(g.prefix));
         if (!items.length) {
           return (
             <section class="panel" key={g.prefix}>
-              <h2 class="section">{g.title}</h2>
+              <h2 class="panel-title">{g.title}</h2>
               <p class="hint">Ancora nessun esercizio.</p>
             </section>
           );
@@ -51,13 +58,15 @@ export function Stats() {
           .slice(0, 8);
         return (
           <section class="panel" key={g.prefix}>
-            <h2 class="section">{g.title}</h2>
+            <h2 class="panel-title">{g.title}</h2>
             <div class="stat-grid">
               <Stat n={items.length} label="elementi visti" />
               <Stat n={mastered} label="imparati" />
               <Stat n={due} label="da ripassare" />
               <Stat n={`${Math.round((100 * correct) / attempts)}%`} label="risposte giuste" />
-              <Stat n={`${(time / attempts / 1000).toFixed(1).replace('.', ',')} s`} label="tempo medio" />
+              {g.prefix !== GUITAR_PREFIX && (
+                <Stat n={`${(time / attempts / 1000).toFixed(1).replace('.', ',')} s`} label="tempo medio" />
+              )}
             </div>
             {weak.length > 0 && (
               <>

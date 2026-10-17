@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
 import { Staff } from '../components/Staff';
-import { useSettings, useStored } from '../store';
+import { useSettings } from '../store';
 import { tiered } from '../srs/srs';
 import { STRINGS, STRING_NAMES, soundingMidi } from '../theory/guitar';
 import {
@@ -18,7 +18,7 @@ import {
   samePitchClass,
 } from '../theory/notes';
 import { accidentalInKey, keyName, signatureLabel, tonicFromSignature } from '../theory/scales';
-import { type Outcome, useExercise } from './useExercise';
+import { type ExerciseProps, type Outcome, useExercise, useExerciseConfig } from './useExercise';
 
 type Range = 'staff' | 'near' | 'far';
 type Kind = 'notes' | 'keys';
@@ -31,7 +31,7 @@ interface Config {
   guitarClef: boolean;
 }
 
-const DEFAULT: Config = { kind: 'notes', ranges: ['staff', 'near'], accidentals: false, maxAcc: 4, guitarClef: true };
+export const DEFAULT: Config = { kind: 'notes', ranges: ['staff', 'near'], accidentals: false, maxAcc: 4, guitarClef: true };
 
 export const PREFIX = 'rd:';
 
@@ -114,11 +114,11 @@ function guitarPlaces(note: Note): string {
   return places.length ? `Sulla chitarra: ${places.slice(0, 3).join(', ')}.` : '';
 }
 
-export function ReadingQuiz() {
-  const [config, setConfig] = useStored<Config>('cfg.read', DEFAULT);
-  const ex = useExercise(() => buildPool(config), parse, JSON.stringify(config));
+export function ReadingQuiz(props: ExerciseProps<Config>) {
+  const [config, setConfig] = useExerciseConfig('cfg.read', DEFAULT, props.config);
+  const ex = useExercise(() => buildPool(config), parse, JSON.stringify(config), props);
 
-  const settings = (
+  const settings = setConfig && (
     <>
       <Radio
         label="Esercizio"
@@ -172,7 +172,7 @@ export function ReadingQuiz() {
   );
 
   return (
-    <Shell title="Lettura delle note" session={ex.session} settings={settings}>
+    <Shell title={props.title ?? 'Lettura'} back={props.back} session={ex.session} settings={settings} embedded={ex.embedded}>
       {ex.error && <p class="empty">{ex.error}</p>}
       {ex.current && (
         <QuestionView

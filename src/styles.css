@@ -90,132 +90,22 @@ h1 {
   letter-spacing: -0.01em;
 }
 
-/* Home */
-.home-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 0 16px;
-}
-.home-head h1 {
-  font-size: 1.6rem;
-}
-.home-head nav {
-  display: flex;
-  gap: 16px;
-}
-.home-head nav a {
-  text-decoration: none;
-  font-weight: 600;
-}
-.cards {
-  display: grid;
-  gap: 12px;
-}
-@media (min-width: 640px) {
-  .cards {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-.card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  text-decoration: none;
-  color: var(--fg);
-  position: relative;
-  transition: transform 0.1s;
-}
-.card:active {
-  transform: scale(0.98);
-}
-.card-icon {
-  flex: none;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  font-size: 1.6rem;
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.card-title {
-  font-weight: 650;
-}
-.card-text {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-.badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 7px;
-  border-radius: 12px;
-  background: var(--gold);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-}
-.section {
-  font-size: 1rem;
-  margin: 24px 0 8px;
-  color: var(--muted);
-  font-weight: 600;
-}
-.panel .section:first-child {
-  margin-top: 0;
-}
-.coming {
-  margin: 0;
-  padding-left: 20px;
-  color: var(--muted);
-}
-
 /* Esercizi */
-.ex-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 0 10px;
-}
-.ex-head h1 {
-  flex: 1;
-}
-.back {
-  font-size: 2rem;
-  line-height: 1;
-  text-decoration: none;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  margin-left: -6px;
-}
 .icon-btn {
+  flex: none;
   width: 40px;
   height: 40px;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: 1.2rem;
+  color: var(--fg);
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+.icon-btn.ghost {
+  border-color: transparent;
+  background: none;
 }
 .icon-btn.active {
   background: var(--accent);
@@ -682,3 +572,599 @@ h1 {
 .legend .lg-third { background: var(--third); }
 .legend .lg-fifth { background: var(--fifth); }
 .legend .lg-other { background: var(--other); }
+
+/* ── Struttura delle pagine ── */
+main.with-nav {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 14px;
+}
+.page-head .icon-btn.ghost:first-child {
+  margin-left: -10px;
+}
+.page-title {
+  flex: 1;
+  min-width: 0;
+}
+.page-title h1 {
+  font-size: 1.45rem;
+}
+.page-sub {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.panel-title {
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0 0 8px;
+}
+.panel-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 0.85rem;
+}
+.block {
+  display: block;
+}
+.center {
+  text-align: center;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.field span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.field input {
+  font: inherit;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  max-width: 220px;
+}
+.link-btn.inline {
+  padding: 0;
+  font-size: inherit;
+}
+a.primary,
+a.secondary {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+.primary.big {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1.05rem;
+  margin-top: 12px;
+}
+.icon {
+  flex: none;
+}
+
+/* ── Barra di navigazione ── */
+.navbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+}
+.navbar a {
+  flex: 1;
+  max-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.navbar a.on {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* ── Oggi ── */
+.minutes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+.block-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.block-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.block-list li:first-child {
+  border-top: none;
+}
+.block-list li.done {
+  opacity: 0.55;
+}
+.block-list li.done .block-title {
+  text-decoration: line-through;
+}
+.block-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.block-role {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 650;
+}
+.block-title {
+  font-weight: 600;
+}
+.block-sub {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.block-min {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-weight: 600;
+}
+/* Colori dei tipi di blocco, uguali ovunque */
+.role-ripasso {
+  --role: var(--fifth);
+}
+.role-nuovo {
+  --role: var(--gold);
+}
+.role-consolida {
+  --role: var(--third);
+}
+.role-chitarra {
+  --role: var(--accent);
+}
+.block-icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--role);
+  color: var(--chord-fg);
+}
+.role-chitarra.block-icon {
+  color: var(--accent-fg);
+}
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--role);
+  background: color-mix(in srgb, var(--role) 14%, transparent);
+}
+.done-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ok-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.done-box p {
+  margin: 0;
+}
+.week {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.week li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.week .dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+}
+.week .partial .dot {
+  border-color: var(--ok);
+}
+.week .done .dot {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.week .today {
+  color: var(--fg);
+  font-weight: 700;
+}
+.unit-card {
+  display: block;
+  text-decoration: none;
+  color: var(--fg);
+}
+.unit-card p {
+  margin: 4px 0;
+}
+.unit-title {
+  font-weight: 650;
+  font-size: 1.05rem;
+}
+.status-chip {
+  font-size: 0.78rem;
+  font-weight: 650;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.status-chip.ok {
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+.status-chip.late {
+  color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 15%, transparent);
+}
+.bar {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin: 6px 0 2px;
+}
+.bar.thin {
+  height: 5px;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+/* ── Sessione in corso ── */
+.run-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 12px;
+}
+.run-head .icon-btn {
+  margin-left: -10px;
+}
+.run-progress {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+.run-progress span {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.run-progress span.done {
+  background: var(--role);
+}
+.run-progress span.now {
+  background: color-mix(in srgb, var(--role) 45%, var(--surface-2));
+}
+.run-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  min-width: 3.2em;
+  text-align: right;
+}
+.run-timer.over {
+  color: var(--gold);
+}
+.run-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.run-title h1 {
+  font-size: 1.2rem;
+}
+.between {
+  text-align: center;
+  padding: 24px 16px;
+}
+.between h2 {
+  margin: 0 0 8px;
+}
+
+/* ── Attività con la chitarra ── */
+.guitar-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ga-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ga-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.steps {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.figure {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.timer-time {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.timer-time.over {
+  color: var(--ok);
+}
+.grade-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+.grade {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  text-align: left;
+}
+.grade span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.grade-good b {
+  color: var(--ok);
+}
+.grade-hard b {
+  color: var(--gold);
+}
+.grade-again b {
+  color: var(--bad);
+}
+
+/* ── Programma ── */
+.units {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.unit {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.unit-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.unit-head {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+}
+.unit-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.unit-current .unit-mark {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.unit-done .unit-mark {
+  background: var(--ok);
+  color: #fff;
+}
+.unit-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.unit-body {
+  padding: 0 14px 14px 54px;
+}
+.unit-body p {
+  margin: 0 0 8px;
+}
+.activities {
+  list-style: none;
+  margin: 8px 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.activities a,
+.activities li > span {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--fg);
+  text-decoration: none;
+}
+.activities .soon {
+  opacity: 0.6;
+}
+@media (max-width: 480px) {
+  .unit-body {
+    padding-left: 14px;
+  }
+}
+
+/* ── Schede degli esercizi ── */
+.section {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 20px 0 8px;
+  color: var(--muted);
+  font-weight: 650;
+}
+.cards {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--fg);
+  position: relative;
+}
+.card:active {
+  transform: scale(0.98);
+}
+.card-icon {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.card-title {
+  font-weight: 650;
+}
+.card-text {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 12px;
+  background: var(--fifth);
+  color: var(--chord-fg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.coming {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+.ex-settings .panel-title {
+  margin-bottom: 10px;
+}

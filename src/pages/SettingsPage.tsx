@@ -1,9 +1,12 @@
+import { PageHead } from '../components/Layout';
 import { Radio } from '../components/Shell';
+import { useProgram } from '../program/progress';
 import { reloadDb } from '../srs/srs';
 import { exportAll, importAll, useSettings } from '../store';
 
 export function SettingsPage() {
   const [settings, setSettings] = useSettings();
+  const [program, setProgram] = useProgram();
 
   const download = () => {
     const blob = new Blob([JSON.stringify(exportAll(), null, 1)], { type: 'application/json' });
@@ -25,14 +28,31 @@ export function SettingsPage() {
   };
 
   return (
-    <div class="exercise">
-      <header class="ex-head">
-        <a href="#/" class="back" aria-label="Torna alla home">
-          ‹
-        </a>
-        <h1>Impostazioni</h1>
-      </header>
+    <div class="page">
+      <PageHead title="Impostazioni" back="#/" />
       <section class="panel">
+        <h2 class="panel-title">Studio</h2>
+        <Radio
+          label="Durata abituale della sessione"
+          options={[10, 20, 30, 45].map((m) => ({ value: m, label: `${m} minuti` }))}
+          value={settings.sessionMinutes}
+          onChange={(sessionMinutes) => setSettings({ ...settings, sessionMinutes })}
+        />
+        <label class="field">
+          <span>Inizio del programma</span>
+          <input
+            type="date"
+            value={program.start}
+            onChange={(e) => {
+              const v = (e.target as HTMLInputElement).value;
+              if (v) setProgram({ ...program, start: v });
+            }}
+          />
+          <small class="muted">Serve a capire se sei in pari con il calendario.</small>
+        </label>
+      </section>
+      <section class="panel">
+        <h2 class="panel-title">Esercizi</h2>
         <Radio
           label="Nomi delle note"
           options={[
@@ -53,7 +73,7 @@ export function SettingsPage() {
         />
       </section>
       <section class="panel">
-        <h2 class="section">Backup</h2>
+        <h2 class="panel-title">Backup</h2>
         <p class="hint">
           I progressi restano salvati in questo browser. Per portarli su un altro dispositivo, salva un backup e
           caricalo dall'altra parte.

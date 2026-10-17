@@ -36,14 +36,24 @@ export const getDb = () => db;
 export const getItem = (id: string): ItemState | undefined => db[id];
 
 export function record(id: string, correct: boolean, ms: number) {
+  recordGrade(id, correct ? 'good' : 'again', ms);
+}
+
+/**
+ * Voto a tre livelli, per le attività che valuti da solo:
+ * good = sale di scatola, hard = resta dov'è e torna presto, again = si ricomincia.
+ */
+export function recordGrade(id: string, grade: 'good' | 'hard' | 'again', ms: number) {
   const now = Date.now();
   const prev = db[id] ?? { box: 0, due: now, seen: 0, correct: 0, totalMs: 0, last: now };
-  const box = correct ? Math.min(prev.box + 1, MAX_BOX) : 0;
+  const correct = grade !== 'again';
+  const box = grade === 'good' ? Math.min(prev.box + 1, MAX_BOX) : grade === 'hard' ? Math.max(prev.box, 1) : 0;
+  const wait = grade === 'good' ? INTERVALS[box] : grade === 'hard' ? INTERVALS[Math.max(1, box - 1)] : RETRY_DELAY;
   db = {
     ...db,
     [id]: {
       box,
-      due: now + (correct ? INTERVALS[box] : RETRY_DELAY),
+      due: now + wait,
       seen: prev.seen + 1,
       correct: prev.correct + (correct ? 1 : 0),
       totalMs: prev.totalMs + Math.min(ms, 60 * SEC),

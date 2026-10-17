@@ -1,39 +1,59 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import type { Outcome, Session } from '../exercises/useExercise';
+import { Icon } from './Icon';
+import { PageHead } from './Layout';
 
 interface Props {
   title: string;
   session: Session;
   settings?: ComponentChildren;
+  /** Dentro una sessione guidata: titolo, ritorno e opzioni li mostra la sessione. */
+  embedded?: boolean;
+  /** Pagina a cui torna la freccia (di solito l'elenco degli esercizi). */
+  back?: string;
   children: ComponentChildren;
 }
 
-export function Shell({ title, session, settings, children }: Props) {
+/** Cornice comune degli esercizi: intestazione, opzioni, punteggio della sessione. */
+export function Shell({ title, session, settings, embedded, back = '#/esercizi', children }: Props) {
   const [open, setOpen] = useState(false);
   return (
     <div class="exercise">
-      <header class="ex-head">
-        <a href="#/" class="back" aria-label="Torna alla home">
-          ‹
-        </a>
-        <h1>{title}</h1>
-        {settings && (
-          <button class={`icon-btn ${open ? 'active' : ''}`} onClick={() => setOpen(!open)} aria-label="Impostazioni">
-            ⚙
-          </button>
-        )}
-      </header>
-      {open && settings && <div class="ex-settings">{settings}</div>}
+      {!embedded && (
+        <PageHead
+          title={title}
+          back={back}
+          actions={
+            settings && (
+              <button
+                class={`icon-btn ${open ? 'active' : ''}`}
+                onClick={() => setOpen(!open)}
+                aria-label="Cosa allenare"
+                aria-expanded={open}
+                title="Cosa allenare"
+              >
+                <Icon name="sliders" />
+              </button>
+            )
+          }
+        />
+      )}
+      {open && settings && (
+        <div class="ex-settings">
+          <p class="panel-title">Cosa allenare</p>
+          {settings}
+        </div>
+      )}
       <div class="score">
         <span>
-          Risposte: <b>{session.done}</b>
+          Risposte <b>{session.done}</b>
         </span>
         <span>
-          Giuste: <b>{session.done ? Math.round((100 * session.correct) / session.done) : 0}%</b>
+          Giuste <b>{session.done ? Math.round((100 * session.correct) / session.done) : 0}%</b>
         </span>
         <span>
-          Di fila: <b>{session.streak}</b>
+          Di fila <b>{session.streak}</b>
         </span>
       </div>
       {children}

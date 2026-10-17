@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { type FretMark, Fretboard, chordToneKind } from '../components/Fretboard';
 import { Choices } from '../components/NotePicker';
 import { Feedback, Shell, Toggles } from '../components/Shell';
-import { useSettings, useStored } from '../store';
+import { useSettings } from '../store';
 import { tiered } from '../srs/srs';
 import { INVERSIONS, QUALITIES, buildTriad, chordName, chordRoot } from '../theory/chords';
 import { type FretPos, type GuitarString, STRING_NAMES, samePos, soundingMidi } from '../theory/guitar';
@@ -18,7 +18,7 @@ import {
   setLabel,
   triadVoicing,
 } from '../theory/positions';
-import { type Outcome, useExercise } from './useExercise';
+import { type ExerciseProps, type Outcome, useExercise, useExerciseConfig } from './useExercise';
 
 type Kind = 'shape' | 'build' | 'deg' | 'tri' | 'inv';
 type Q2 = 'maj' | 'min';
@@ -38,7 +38,7 @@ interface Config {
   sets: string[];
 }
 
-const DEFAULT: Config = { kinds: ['shape', 'build', 'deg', 'tri', 'inv'], qualities: ['maj', 'min'], forms: [...CAGED_FORMS], sets: ['0', '1', '2', '3'] };
+export const DEFAULT: Config = { kinds: ['shape', 'build', 'deg', 'tri', 'inv'], qualities: ['maj', 'min'], forms: [...CAGED_FORMS], sets: ['0', '1', '2', '3'] };
 
 export const PREFIX = 'ch:';
 const MAX_FRET = 15;
@@ -108,11 +108,11 @@ const alternatives = (v: FretPos[]) =>
     .map((s) => v.map((p) => ({ ...p, fret: p.fret + s })))
     .filter((c) => c.every((p) => p.fret >= 0 && p.fret <= MAX_FRET));
 
-export function ChordFretQuiz() {
-  const [config, setConfig] = useStored<Config>('cfg.chords', DEFAULT);
-  const ex = useExercise(() => buildPool(config), parse, JSON.stringify(config));
+export function ChordFretQuiz(props: ExerciseProps<Config>) {
+  const [config, setConfig] = useExerciseConfig('cfg.chords', DEFAULT, props.config);
+  const ex = useExercise(() => buildPool(config), parse, JSON.stringify(config), props);
 
-  const settings = (
+  const settings = setConfig && (
     <>
       <Toggles label="Domande" options={KINDS} value={config.kinds} onChange={(kinds) => setConfig({ ...config, kinds })} />
       <Toggles
@@ -140,7 +140,7 @@ export function ChordFretQuiz() {
   );
 
   return (
-    <Shell title="Accordi sul manico" session={ex.session} settings={settings}>
+    <Shell title={props.title ?? 'Accordi sul manico'} back={props.back} session={ex.session} settings={settings} embedded={ex.embedded}>
       {ex.error && <p class="empty">{ex.error}</p>}
       {ex.current && <QuestionView key={ex.current.n} q={ex.current.q} outcome={ex.outcome} finish={ex.finish} next={ex.next} />}
     </Shell>
