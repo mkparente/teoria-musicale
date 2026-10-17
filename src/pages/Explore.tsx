@@ -2,6 +2,8 @@ import { type FretMark, Fretboard } from '../components/Fretboard';
 import { Radio } from '../components/Shell';
 import { Staff } from '../components/Staff';
 import { ScaleExplain } from '../exercises/ScaleQuiz';
+import { DiatonicTable } from '../exercises/TriadQuiz';
+import { ExploreChords } from './ExploreChords';
 import { useSettings, useStored } from '../store';
 import { type FretPos, positionsOf, soundingMidi } from '../theory/guitar';
 import { pentatonicBox } from '../theory/positions';
@@ -42,7 +44,7 @@ const RELATIVE_TYPE: Record<ScaleType, ScaleType> = {
   pentMinor: 'pentMajor',
 };
 
-export function Explore() {
+function ExploreScales() {
   const [{ naming }] = useSettings();
   const [st, setSt] = useStored<State>('explore', { type: 'major', tonic: '0', labels: 'notes', maxFret: 12, box: 0 });
   const mode = SCALES[st.type].mode;
@@ -72,13 +74,7 @@ export function Explore() {
   const maxFret = Math.max(st.maxFret, ...boxPositions.map((p) => p.fret));
 
   return (
-    <div class="exercise">
-      <header class="ex-head">
-        <a href="#/" class="back" aria-label="Torna alla home">
-          ‹
-        </a>
-        <h1>Esplora le scale</h1>
-      </header>
+    <>
       <Radio
         label="Scala"
         options={SCALE_TYPES.map((t) => ({ value: t, label: SCALES[t].name }))}
@@ -126,6 +122,12 @@ export function Explore() {
             ))}
           </tbody>
         </table>
+        {!pent && (
+          <>
+            <h3 class="sub">Triadi della tonalità</h3>
+            <DiatonicTable tonic={tonic} type={st.type} />
+          </>
+        )}
       </section>
 
       <section class="panel">
@@ -154,6 +156,30 @@ export function Explore() {
             ' Due note per corda; la posizione 1 parte dalla tonica sul Mi basso e ogni posizione comincia dove finisce la precedente.'}
         </p>
       </section>
+    </>
+  );
+}
+
+/** Pagina "Esplora": scale oppure accordi. */
+export function Explore() {
+  const [tab, setTab] = useStored<'scales' | 'chords'>('explore.tab', 'scales');
+  return (
+    <div class="exercise">
+      <header class="ex-head">
+        <a href="#/" class="back" aria-label="Torna alla home">
+          ‹
+        </a>
+        <h1>Esplora</h1>
+      </header>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'scales'} class={tab === 'scales' ? 'on' : ''} onClick={() => setTab('scales')}>
+          Scale
+        </button>
+        <button role="tab" aria-selected={tab === 'chords'} class={tab === 'chords' ? 'on' : ''} onClick={() => setTab('chords')}>
+          Accordi
+        </button>
+      </div>
+      {tab === 'scales' ? <ExploreScales /> : <ExploreChords />}
     </div>
   );
 }

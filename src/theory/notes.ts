@@ -109,3 +109,14 @@ export const ACCIDENTAL_WORDS: Record<Accidental, string> = {
   1: 'diesis',
   2: 'doppio diesis',
 };
+
+/** Note impilate dal basso: ognuna sulla prima riga o spazio con quella lettera sopra la precedente. */
+export function stackUp(pcs: PitchClass[], octave = 4): Note[] {
+  const out: Note[] = [];
+  let idx = diatonicIndex({ ...pcs[0], octave });
+  pcs.forEach((p, i) => {
+    if (i > 0) idx += mod(p.letter - out[i - 1].letter, 7) || 7;
+    out.push(fromDiatonicIndex(idx, p.acc));
+  });
+  return out;
+}

@@ -16,13 +16,15 @@ interface Props {
   activeStrings?: GuitarString[];
   /** Corda evidenziata (es. "trova il Re sulla 5ª"). */
   focusString?: GuitarString;
+  /** Zona del manico da evidenziare, dal tasto `lo` al tasto `hi` compresi. */
+  region?: { lo: number; hi: number };
 }
 
 /**
  * Manico disegnato in SVG. Orizzontale sugli schermi larghi (cantino in alto, come nelle tab),
  * verticale sul telefono (Mi basso a sinistra, capotasto in alto, come nei diagrammi degli accordi).
  */
-export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS, focusString }: Props) {
+export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS, focusString, region }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const width = useWidth(ref);
   const vertical = width > 0 && width < 560;
@@ -60,6 +62,14 @@ export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS,
     <div class="fretboard" ref={ref}>
       {width > 0 && (
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Manico della chitarra">
+          {region &&
+            (() => {
+              const a0 = region.lo === 0 ? 0 : lines[region.lo - 1];
+              const a1 = lines[Math.min(region.hi, maxFret)];
+              const p = pt(a0, 0);
+              const size = vertical ? { width: breadth, height: a1 - a0 } : { width: a1 - a0, height: breadth };
+              return <rect x={p.x} y={p.y} {...size} class="fb-region" rx={6} />;
+            })()}
           {/* pallini */}
           {INLAYS.filter((f) => f <= maxFret).map((f) => {
             const p = pt(center(f), inlayAcross);

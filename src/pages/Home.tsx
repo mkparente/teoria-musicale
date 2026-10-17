@@ -9,11 +9,25 @@ const ITEMS = [
     icon: '♯',
   },
   {
+    href: '#/triadi',
+    prefix: 'tr:',
+    title: 'Triadi',
+    text: 'Costruire e riconoscere le triadi, i rivolti, le triadi di ogni grado.',
+    icon: '△',
+  },
+  {
     href: '#/manico',
     prefix: 'fb:',
     title: 'Note sul manico',
     text: 'Trova le note sulla chitarra, corda per corda.',
     icon: '⋮',
+  },
+  {
+    href: '#/accordi',
+    prefix: 'ch:',
+    title: 'Accordi sul manico',
+    text: 'Le forme CAGED e le triadi su 3 corde, in tutti i rivolti.',
+    icon: '▦',
   },
   {
     href: '#/lettura',
@@ -24,8 +38,8 @@ const ITEMS = [
   },
   {
     href: '#/esplora',
-    title: 'Esplora le scale',
-    text: 'Ogni scala sul pentagramma e sul manico, con i gradi e le posizioni delle pentatoniche.',
+    title: 'Esplora',
+    text: 'Scale e accordi sul pentagramma e sul manico: gradi, box delle pentatoniche, forme CAGED.',
     icon: '◎',
   },
 ];

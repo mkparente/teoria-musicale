@@ -1,9 +1,11 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { registerSW } from 'virtual:pwa-register';
+import { ChordFretQuiz } from './exercises/ChordFretQuiz';
 import { FretboardQuiz } from './exercises/FretboardQuiz';
 import { ReadingQuiz } from './exercises/ReadingQuiz';
 import { ScaleQuiz } from './exercises/ScaleQuiz';
+import { TriadQuiz } from './exercises/TriadQuiz';
 import { Explore } from './pages/Explore';
 import { Home } from './pages/Home';
 import { SettingsPage } from './pages/SettingsPage';
@@ -14,7 +16,9 @@ import './styles.css';
 const ROUTES: Record<string, () => preact.JSX.Element> = {
   '': Home,
   scale: ScaleQuiz,
+  triadi: TriadQuiz,
   manico: FretboardQuiz,
+  accordi: ChordFretQuiz,
   lettura: ReadingQuiz,
   esplora: Explore,
   statistiche: Stats,

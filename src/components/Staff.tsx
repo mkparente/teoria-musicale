@@ -20,11 +20,13 @@ interface Props {
   zoom?: number;
   /** Larghezza massima del rigo in pixel. */
   maxWidth?: number;
+  /** Note sovrapposte in un unico accordo invece che una dopo l'altra (vanno date dal basso). */
+  chord?: boolean;
 }
 
 const fontsReady = typeof document !== 'undefined' ? document.fonts.load('30px Bravura') : Promise.resolve();
 
-export function Staff({ notes, keySig = 0, guitar = false, zoom = 1.5, maxWidth = 640 }: Props) {
+export function Staff({ notes, keySig = 0, guitar = false, zoom = 1.5, maxWidth = 640, chord = false }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const width = Math.min(useWidth(ref), maxWidth);
 
@@ -52,12 +54,20 @@ export function Staff({ notes, keySig = 0, guitar = false, zoom = 1.5, maxWidth 
       if (keySig !== 0) stave.addKeySignature(vexKeySpec(keySig));
       stave.setContext(ctx).draw();
 
-      if (notes.length) {
+      const needsAcc = (note: Note) => note.acc !== accidentalInKey(note.letter, keySig);
+      const accOf = (note: Note) => new Accidental(vexAccidental(note.acc) ?? 'n');
+
+      if (chord && notes.length) {
+        const sn = new StaveNote({ keys: notes.map((n) => vexKey(n.note)), duration: 'w', clef: 'treble' });
+        notes.forEach(({ note, color: c }, i) => {
+          if (needsAcc(note)) sn.addModifier(accOf(note), i);
+          if (c) sn.setKeyStyle(i, { fillStyle: resolve(c), strokeStyle: resolve(c) });
+        });
+        Formatter.FormatAndDraw(ctx, stave, [sn]);
+      } else if (notes.length) {
         const vexNotes = notes.map(({ note, color: c, label }) => {
           const sn = new StaveNote({ keys: [vexKey(note)], duration: 'w', clef: 'treble' });
-          if (note.acc !== accidentalInKey(note.letter, keySig)) {
-            sn.addModifier(new Accidental(vexAccidental(note.acc) ?? 'n'), 0);
-          }
+          if (needsAcc(note)) sn.addModifier(accOf(note), 0);
           if (label) {
             sn.addModifier(
               new Annotation(label)
@@ -81,7 +91,7 @@ export function Staff({ notes, keySig = 0, guitar = false, zoom = 1.5, maxWidth 
     return () => {
       cancelled = true;
     };
-  }, [width, zoom, keySig, guitar, JSON.stringify(notes)]);
+  }, [width, zoom, keySig, guitar, chord, JSON.stringify(notes)]);
 
   return <div class="staff" ref={ref} />;
 }

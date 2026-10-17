@@ -1,14 +1,18 @@
 import { useState } from 'preact/hooks';
+import { describe as describeChords } from '../exercises/ChordFretQuiz';
 import { describe as describeFret } from '../exercises/FretboardQuiz';
 import { describe as describeRead } from '../exercises/ReadingQuiz';
 import { describe as describeScale } from '../exercises/ScaleQuiz';
+import { describe as describeTriad } from '../exercises/TriadQuiz';
 import { MASTERED_BOX, getDb, resetPrefix } from '../srs/srs';
 import { type Naming } from '../theory/notes';
 import { useSettings } from '../store';
 
 const GROUPS: { prefix: string; title: string; describe: (id: string, n: Naming) => string }[] = [
   { prefix: 'sq:', title: 'Quiz sulle scale', describe: describeScale },
+  { prefix: 'tr:', title: 'Triadi', describe: describeTriad },
   { prefix: 'fb:', title: 'Note sul manico', describe: describeFret },
+  { prefix: 'ch:', title: 'Accordi sul manico', describe: describeChords },
   { prefix: 'rd:', title: 'Lettura delle note', describe: describeRead },
 ];
 
