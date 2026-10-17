@@ -4,10 +4,10 @@ App personale (PWA) per studiare teoria musicale con la chitarra: scale maggiori
 
 ## Esercizi
 
-- **Quiz sulle scale**: trovare un grado, dire che grado è una nota, armature, da armatura a tonalità, relative, scrivere la scala.
+- **Quiz sulle scale** (maggiore, minori naturale/armonica/melodica, pentatoniche maggiore e minore): trovare un grado, dire che grado è una nota, armature, da armatura a tonalità, relative, scrivere la scala.
 - **Note sul manico**: nota su una corda, che nota è, tutte le posizioni di una nota.
 - **Lettura delle note**: chiave di violino (anche con l'8 sotto, come per chitarra), con o senza armatura.
-- **Esplora le scale**: ogni scala sul pentagramma e sul manico, con i nomi dei gradi.
+- **Esplora le scale**: ogni scala sul pentagramma e sul manico, con i nomi dei gradi; per le pentatoniche anche le 5 posizioni (box).
 
 Ogni risposta alimenta un ripasso a scatole (Leitner, `src/srs/srs.ts`): quello che sbagli torna presto, quello che sai torna sempre più di rado. I progressi restano nel browser (localStorage); dalle impostazioni si può salvare e ricaricare un backup.
 

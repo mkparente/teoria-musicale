@@ -1,19 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { commonSpellings, midi, noteName, parsePcKey, pcKey, type PitchClass } from './notes';
+import { commonSpellings, midi, noteName, parsePcKey, pcKey, pitchClass, type PitchClass } from './notes';
 import {
   MAJOR_TONICS,
   MINOR_TONICS,
   buildScale,
+  degreeFunction,
+  degreeLabel,
   degreeName,
   keySignature,
   relativeMajor,
   relativeMinor,
   scaleNotes,
   signatureAccidentals,
+  stepPattern,
   tonicFromSignature,
   vexKeySpec,
 } from './scales';
 import { positionsOf, soundingMidi } from './guitar';
+import { pentatonicBox } from './positions';
 
 const names = (pcs: PitchClass[]) => pcs.map((p) => noteName(p, 'it')).join(' ');
 const tonic = (letter: number, acc = 0) => ({ letter, acc }) as PitchClass;
@@ -103,5 +107,56 @@ describe('chitarra', () => {
       { string: 6, fret: 0 },
       { string: 6, fret: 12 },
     ]);
+  });
+});
+
+describe('pentatoniche', () => {
+  it('note', () => {
+    expect(names(buildScale(tonic(5), 'pentMinor'))).toBe('La Do Re Mi Sol');
+    expect(names(buildScale(tonic(0), 'pentMajor'))).toBe('Do Re Mi Sol La');
+    expect(names(buildScale(tonic(2, -1), 'pentMinor'))).toBe('Mi♭ Sol♭ La♭ Si♭ Re♭');
+    expect(names(buildScale(tonic(2), 'pentMajor'))).toBe('Mi Fa♯ Sol♯ Si Do♯');
+  });
+
+  it('relative: Do pentatonica maggiore e La pentatonica minore hanno le stesse note', () => {
+    const maj = buildScale(tonic(0), 'pentMajor').map((p) => noteName(p, 'it')).sort();
+    const min = buildScale(tonic(5), 'pentMinor').map((p) => noteName(p, 'it')).sort();
+    expect(maj).toEqual(min);
+  });
+
+  it('sul rigo le note saltano le lettere giuste', () => {
+    const notes = scaleNotes(tonic(5), 'pentMinor', 4);
+    expect(notes.map((n) => `${noteName(n, 'it')}${n.octave}`).join(' ')).toBe('La4 Do5 Re5 Mi5 Sol5 La5');
+  });
+
+  it('gradi e schema', () => {
+    expect(degreeLabel('pentMinor', 1)).toBe('♭3');
+    expect(degreeFunction('pentMinor', 4)).toBe('settima minore');
+    expect(degreeLabel('major', 4)).toBe('V');
+    expect(degreeFunction('major', 4)).toBe('dominante');
+    expect(stepPattern('pentMinor')).toBe('T+S – T – T – T+S – T');
+    expect(stepPattern('major')).toBe('T – T – S – T – T – T – S');
+  });
+
+  it('box 1 di La minore pentatonica', () => {
+    const frets = pentatonicBox(buildScale(tonic(5), 'pentMinor'), 1).map((p) => `${p.string}:${p.fret}`);
+    expect(frets.join(' ')).toBe('6:5 6:8 5:5 5:7 4:5 4:7 3:5 3:7 2:5 2:8 1:5 1:8');
+  });
+
+  it('tutte le posizioni stanno sul manico e danno note della scala', () => {
+    for (const t of MAJOR_TONICS) {
+      for (const type of ['pentMajor', 'pentMinor'] as const) {
+        const scale = buildScale(t, type).map((p) => pitchClass(p));
+        for (let b = 1; b <= 5; b++) {
+          const box = pentatonicBox(buildScale(t, type), b);
+          expect(box.length).toBe(12);
+          for (const p of box) {
+            expect(p.fret).toBeGreaterThanOrEqual(0);
+            expect(p.fret).toBeLessThanOrEqual(16);
+            expect(scale).toContain(soundingMidi(p) % 12);
+          }
+        }
+      }
+    }
   });
 });

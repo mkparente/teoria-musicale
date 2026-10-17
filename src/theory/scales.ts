@@ -11,14 +11,20 @@ import {
   spell,
 } from './notes';
 
-export type ScaleType = 'major' | 'natural' | 'harmonic' | 'melodic';
+export type ScaleType = 'major' | 'natural' | 'harmonic' | 'melodic' | 'pentMajor' | 'pentMinor';
 export type Mode = 'major' | 'minor';
 
 interface ScaleDef {
   name: string;
   short: string;
   mode: Mode;
-  steps: number[];
+  /** Scale di sette note: toni e semitoni tra un grado e il successivo. */
+  steps?: number[];
+  /** Scale di cinque note: la scala madre e i gradi che se ne prendono (0-based). */
+  parent?: ScaleType;
+  picks?: number[];
+  /** Nome di ogni grado come intervallo dalla tonica (solo pentatoniche). */
+  labels?: string[];
 }
 
 export const SCALES: Record<ScaleType, ScaleDef> = {
@@ -27,9 +33,29 @@ export const SCALES: Record<ScaleType, ScaleDef> = {
   harmonic: { name: 'minore armonica', short: 'min. arm.', mode: 'minor', steps: [2, 1, 2, 2, 1, 3, 1] },
   // Forma ascendente; in discesa la melodica coincide con la naturale.
   melodic: { name: 'minore melodica', short: 'min. mel.', mode: 'minor', steps: [2, 1, 2, 2, 2, 2, 1] },
+  // Le pentatoniche si ricavano dalla scala madre togliendo i gradi dei semitoni:
+  // così la grafia delle note resta quella della tonalità.
+  pentMajor: {
+    name: 'pentatonica maggiore',
+    short: 'pent. magg.',
+    mode: 'major',
+    parent: 'major',
+    picks: [0, 1, 2, 4, 5],
+    labels: ['1', '2', '3', '5', '6'],
+  },
+  pentMinor: {
+    name: 'pentatonica minore',
+    short: 'pent. min.',
+    mode: 'minor',
+    parent: 'natural',
+    picks: [0, 2, 3, 4, 6],
+    labels: ['1', '♭3', '4', '5', '♭7'],
+  },
 };
 
-export const SCALE_TYPES: ScaleType[] = ['major', 'natural', 'harmonic', 'melodic'];
+export const SCALE_TYPES: ScaleType[] = ['major', 'natural', 'harmonic', 'melodic', 'pentMajor', 'pentMinor'];
+
+export const isPentatonic = (type: ScaleType) => SCALES[type].picks !== undefined;
 
 const pc = (letter: number, acc: number): PitchClass => ({ letter: letter as Letter, acc: acc as PitchClass['acc'] });
 
@@ -60,23 +86,31 @@ export function tonicsFor(mode: Mode): PitchClass[] {
   return mode === 'major' ? MAJOR_TONICS : MINOR_TONICS;
 }
 
-/** Le sette note della scala, a partire dalla tonica. */
+/** Le note della scala (sette, o cinque per le pentatoniche), a partire dalla tonica. */
 export function buildScale(tonic: PitchClass, type: ScaleType): PitchClass[] {
+  const def = SCALES[type];
+  if (def.parent) {
+    const parent = buildScale(tonic, def.parent);
+    return def.picks!.map((i) => parent[i]);
+  }
   const out: PitchClass[] = [tonic];
   let semis = pitchClass(tonic);
   for (let i = 1; i < 7; i++) {
-    semis += SCALES[type].steps[i - 1];
+    semis += def.steps![i - 1];
     out.push(spell(mod(tonic.letter + i, 7) as Letter, semis));
   }
   return out;
 }
 
-/** Scala con le ottave, salendo per un'ottava (8 note). Per la melodica `descending` usa la forma naturale. */
+/** Scala con le ottave, salendo per un'ottava (tonica ripetuta in cima). Per la melodica `descending` usa la forma naturale. */
 export function scaleNotes(tonic: PitchClass, type: ScaleType, octave = 4, descending = false): Note[] {
   const t = descending && type === 'melodic' ? 'natural' : type;
   const pcs = buildScale(tonic, t);
   const start = diatonicIndex({ ...tonic, octave });
-  const notes = [...pcs, tonic].map((p, i) => fromDiatonicIndex(start + i, p.acc));
+  // La distanza in lettere dalla tonica dice su che riga o spazio va la nota (le pentatoniche saltano lettere).
+  const notes = [...pcs, tonic].map((p, i) =>
+    fromDiatonicIndex(start + (i === pcs.length ? 7 : mod(p.letter - tonic.letter, 7)), p.acc),
+  );
   return descending ? notes.reverse() : notes;
 }
 
@@ -149,4 +183,36 @@ export function degreeName(scale: PitchClass[], degree: number): string {
 }
 
 export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+
+const INTERVAL_NAMES: Record<string, string> = {
+  '1': 'tonica',
+  '2': 'seconda maggiore',
+  '3': 'terza maggiore',
+  '♭3': 'terza minore',
+  '4': 'quarta giusta',
+  '5': 'quinta giusta',
+  '6': 'sesta maggiore',
+  '♭7': 'settima minore',
+};
+
+/** Etichetta breve del grado: numero romano, o intervallo per le pentatoniche (1, ♭3, 4, 5, ♭7). */
+export function degreeLabel(type: ScaleType, degree: number): string {
+  return SCALES[type].labels?.[degree] ?? ROMAN[degree];
+}
+
+/** Nome del grado: funzione armonica, o nome dell'intervallo per le pentatoniche. */
+export function degreeFunction(type: ScaleType, degree: number): string {
+  const label = SCALES[type].labels?.[degree];
+  if (label) return INTERVAL_NAMES[label];
+  return degreeName(buildScale(tonicsFor(SCALES[type].mode)[0], type), degree);
+}
+
+/** Schema di toni (T) e semitoni (S) tra note consecutive, tornando alla tonica. */
+export function stepPattern(type: ScaleType): string {
+  const scale = buildScale(tonicsFor(SCALES[type].mode)[0], type);
+  return scale
+    .map((p, i) => mod(pitchClass(scale[(i + 1) % scale.length]) - pitchClass(p), 12))
+    .map((s) => (s === 1 ? 'S' : s === 2 ? 'T' : s === 3 ? 'T+S' : `${s} S`))
+    .join(' – ');
+}
 export const ordinal = (degree: number) => `${degree + 1}°`;

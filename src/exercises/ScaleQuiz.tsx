@@ -12,7 +12,9 @@ import {
   SCALES,
   SCALE_TYPES,
   buildScale,
-  degreeName,
+  degreeFunction,
+  degreeLabel,
+  isPentatonic,
   keyName,
   keySignature,
   ordinal,
@@ -23,6 +25,7 @@ import {
   signatureAccidentals,
   signatureLabel,
   signatureShort,
+  stepPattern,
   tonicFromSignature,
   tonicsFor,
 } from '../theory/scales';
@@ -60,7 +63,7 @@ export function buildPool(c: Config): string[] {
     for (const tonic of tonicsFor(SCALES[type].mode)) {
       const sig = keySignature(tonic, SCALES[type].mode);
       const t = pcKey(tonic);
-      for (let d = 1; d < 7; d++) {
+      for (let d = 1; d < buildScale(tonic, type).length; d++) {
         if (c.kinds.includes('deg')) add(sig, `deg:${type}:${t}:${d}`);
         if (c.kinds.includes('which')) add(sig, `which:${type}:${t}:${d}`);
       }
@@ -100,6 +103,10 @@ function parse(id: string): Q {
   }
 }
 
+/** "5° grado" per le scale di sette note, "grado ♭3" per le pentatoniche. */
+const degreeText = (type: ScaleType, d: number) =>
+  isPentatonic(type) ? `grado ${degreeLabel(type, d)}` : `${ordinal(d)} grado`;
+
 const typeLabel = (type: ScaleType) => (type === 'melodic' ? 'minore melodica (ascendente)' : SCALES[type].name);
 
 /** Descrizione leggibile di un elemento, per le statistiche. */
@@ -108,7 +115,7 @@ export function describe(id: string, naming: Naming): string {
   const n = (p: PitchClass) => noteName(p, naming);
   switch (q.kind) {
     case 'deg':
-      return `${ordinal(q.d)} grado di ${scaleName(q.tonic, q.type, naming)}`;
+      return `${degreeText(q.type, q.d)} di ${scaleName(q.tonic, q.type, naming)}`;
     case 'which':
       return `che grado è ${n(buildScale(q.tonic, q.type)[q.d])} in ${scaleName(q.tonic, q.type, naming)}`;
     case 'write':
@@ -186,7 +193,7 @@ function QuestionView({ q, outcome, finish, next }: ViewProps) {
       <div class="question">
         {q.kind === 'deg' ? (
           <p class="prompt">
-            Qual è il <b>{ordinal(q.d)} grado</b> della scala di <b>{n(q.tonic)} {typeLabel(q.type)}</b>?
+            Qual è il <b>{degreeText(q.type, q.d)}</b> della scala di <b>{n(q.tonic)} {typeLabel(q.type)}</b>?
           </p>
         ) : (
           <p class="prompt">
@@ -197,8 +204,8 @@ function QuestionView({ q, outcome, finish, next }: ViewProps) {
           <NotePicker onPick={(p) => answerNote(p, target)} marks={marks} disabled={!!outcome} />
         ) : (
           <Choices
-            options={ROMAN.map((r, i) => ({ value: i, label: r }))}
-            columns={7}
+            options={scale.map((_, i) => ({ value: i, label: degreeLabel(q.type, i) }))}
+            columns={scale.length}
             disabled={!!outcome}
             marks={outcome ? [{ value: q.d, kind: 'ok' as const }] : []}
             onPick={(v) => finish(v === q.d)}
@@ -207,7 +214,9 @@ function QuestionView({ q, outcome, finish, next }: ViewProps) {
         <Feedback outcome={outcome} onNext={next}>
           {note && <p>{note}</p>}
           <p>
-            {n(target)} è il {ordinal(q.d)} grado di {name} ({ROMAN[q.d]}, {degreeName(scale, q.d)}).
+            {n(target)} è il {degreeText(q.type, q.d)} di {name} (
+            {isPentatonic(q.type) ? '' : `${ROMAN[q.d]}, `}
+            {degreeFunction(q.type, q.d)}).
           </p>
           <ScaleExplain tonic={q.tonic} type={q.type} highlight={q.d} />
         </Feedback>
@@ -317,7 +326,8 @@ export function ScaleExplain({ tonic, type, highlight }: { tonic: PitchClass; ty
   const up = scaleNotes(tonic, type, 4);
   const toStaff = (notes: typeof up, desc = false) =>
     notes.map((note, i) => {
-      const d = desc ? (7 - i) % 7 : i % 7;
+      const len = up.length - 1;
+      const d = desc ? (len - i) % len : i % len;
       return {
         note,
         label: noteName(note, naming),
@@ -351,7 +361,7 @@ function WriteScale({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { 
     const nextEntered = [...entered, { pc: right[i], ok }];
     setEntered(nextEntered);
     setLastWrong(ok ? null : pc);
-    if (nextEntered.length === 6) finish(nextEntered.every((e) => e.ok));
+    if (nextEntered.length === right.length - 1) finish(nextEntered.every((e) => e.ok));
   };
 
   const shown = [
@@ -375,7 +385,7 @@ function WriteScale({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { 
           ? `Non ${noteName(lastWrong, naming)}: era ${noteName(entered[entered.length - 1].pc, naming)}.`
           : outcome
             ? 'Scala completata.'
-            : `Nota ${entered.length + 2} di 7`}
+            : `Nota ${entered.length + 2} di ${right.length}`}
       </p>
       <NotePicker onPick={pick} disabled={!!outcome} />
       <Feedback outcome={outcome} onNext={next}>
@@ -387,6 +397,9 @@ function WriteScale({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { 
 }
 
 function stepsTip(type: ScaleType): string {
-  const steps = SCALES[type].steps.map((s) => (s === 1 ? 'S' : s === 2 ? 'T' : 'T+S')).join(' – ');
-  return `Schema di toni (T) e semitoni (S): ${steps}.`;
+  const origin: Partial<Record<ScaleType, string>> = {
+    pentMajor: ' È la scala maggiore senza il 4° e il 7° grado.',
+    pentMinor: ' È la minore naturale senza il 2° e il 6° grado.',
+  };
+  return `Schema di toni (T) e semitoni (S): ${stepPattern(type)}.${origin[type] ?? ''}`;
 }

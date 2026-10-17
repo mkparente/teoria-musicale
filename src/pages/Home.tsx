@@ -25,7 +25,7 @@ const ITEMS = [
   {
     href: '#/esplora',
     title: 'Esplora le scale',
-    text: 'Ogni scala sul pentagramma e sul manico, con i nomi dei gradi.',
+    text: 'Ogni scala sul pentagramma e sul manico, con i gradi e le posizioni delle pentatoniche.',
     icon: '◎',
   },
 ];

@@ -3,7 +3,8 @@ import { Radio } from '../components/Shell';
 import { Staff } from '../components/Staff';
 import { ScaleExplain } from '../exercises/ScaleQuiz';
 import { useSettings, useStored } from '../store';
-import { positionsOf } from '../theory/guitar';
+import { type FretPos, positionsOf, soundingMidi } from '../theory/guitar';
+import { pentatonicBox } from '../theory/positions';
 import { noteName, pcKey, pitchClass } from '../theory/notes';
 import {
   type ScaleType,
@@ -11,11 +12,13 @@ import {
   SCALES,
   SCALE_TYPES,
   buildScale,
-  degreeName,
-  keyName,
+  degreeFunction,
+  degreeLabel,
+  isPentatonic,
   keySignature,
   relativeMajor,
   relativeMinor,
+  scaleName,
   signatureLabel,
   tonicsFor,
 } from '../theory/scales';
@@ -25,11 +28,23 @@ interface State {
   tonic: string;
   labels: 'notes' | 'degrees';
   maxFret: number;
+  /** Posizione della pentatonica (1..5), 0 = tutto il manico. */
+  box: number;
 }
+
+/** La relativa della stessa famiglia: maggiore ↔ minore naturale, pentatonica ↔ pentatonica. */
+const RELATIVE_TYPE: Record<ScaleType, ScaleType> = {
+  major: 'natural',
+  natural: 'major',
+  harmonic: 'major',
+  melodic: 'major',
+  pentMajor: 'pentMinor',
+  pentMinor: 'pentMajor',
+};
 
 export function Explore() {
   const [{ naming }] = useSettings();
-  const [st, setSt] = useStored<State>('explore', { type: 'major', tonic: '0', labels: 'notes', maxFret: 12 });
+  const [st, setSt] = useStored<State>('explore', { type: 'major', tonic: '0', labels: 'notes', maxFret: 12, box: 0 });
   const mode = SCALES[st.type].mode;
   const tonics = tonicsFor(mode);
   // Cambiando tra maggiore e minore la tonica scelta potrebbe non esistere: si torna alla prima.
@@ -38,13 +53,23 @@ export function Explore() {
   const sig = keySignature(tonic, mode);
   const relative = mode === 'major' ? relativeMinor(tonic) : relativeMajor(tonic);
 
-  const marks: FretMark[] = scale.flatMap((p, d) =>
-    positionsOf(pitchClass(p), st.maxFret).map((pos) => ({
-      pos,
-      kind: d === 0 ? ('root' as const) : ('note' as const),
-      label: st.labels === 'notes' ? noteName(p, naming) : String(d + 1),
-    })),
-  );
+  const pent = isPentatonic(st.type);
+  const box = pent ? st.box : 0;
+  const relType = RELATIVE_TYPE[st.type];
+  const label = (d: number) =>
+    st.labels === 'notes' ? noteName(scale[d], naming) : pent ? degreeLabel(st.type, d) : String(d + 1);
+  const mark = (pos: FretPos, d: number): FretMark => ({
+    pos,
+    kind: d === 0 ? 'root' : 'note',
+    label: label(d),
+  });
+
+  const pcs = scale.map(pitchClass);
+  const boxPositions = box ? pentatonicBox(scale, box) : [];
+  const marks: FretMark[] = box
+    ? boxPositions.map((pos) => mark(pos, pcs.indexOf(soundingMidi(pos) % 12)))
+    : scale.flatMap((p, d) => positionsOf(pitchClass(p), st.maxFret).map((pos) => mark(pos, d)));
+  const maxFret = Math.max(st.maxFret, ...boxPositions.map((p) => p.fret));
 
   return (
     <div class="exercise">
@@ -80,10 +105,10 @@ export function Explore() {
               href="#/esplora"
               onClick={(e) => {
                 e.preventDefault();
-                setSt({ ...st, type: mode === 'major' ? 'natural' : 'major', tonic: pcKey(relative) });
+                setSt({ ...st, type: relType, tonic: pcKey(relative) });
               }}
             >
-              {keyName(relative, mode === 'major' ? 'minor' : 'major', naming)}
+              {scaleName(relative, relType, naming)}
             </a>
           </div>
         </div>
@@ -92,11 +117,11 @@ export function Explore() {
           <tbody>
             {scale.map((p, d) => (
               <tr key={d}>
-                <td>{ROMAN[d]}</td>
+                <td>{pent ? degreeLabel(st.type, d) : ROMAN[d]}</td>
                 <td>
                   <b>{noteName(p, naming)}</b>
                 </td>
-                <td>{degreeName(scale, d)}</td>
+                <td>{degreeFunction(st.type, d)}</td>
               </tr>
             ))}
           </tbody>
@@ -114,8 +139,20 @@ export function Explore() {
           value={st.labels}
           onChange={(labels) => setSt({ ...st, labels })}
         />
-        <Fretboard maxFret={st.maxFret} marks={marks} />
-        <p class="hint">La tonica è evidenziata.</p>
+        {pent && (
+          <Radio
+            label="Posizione"
+            options={[0, 1, 2, 3, 4, 5].map((b) => ({ value: b, label: b === 0 ? 'Tutto il manico' : String(b) }))}
+            value={box}
+            onChange={(b) => setSt({ ...st, box: b })}
+          />
+        )}
+        <Fretboard maxFret={maxFret} marks={marks} />
+        <p class="hint">
+          La tonica è evidenziata.
+          {box > 0 &&
+            ' Due note per corda; la posizione 1 parte dalla tonica sul Mi basso e ogni posizione comincia dove finisce la precedente.'}
+        </p>
       </section>
     </div>
   );
