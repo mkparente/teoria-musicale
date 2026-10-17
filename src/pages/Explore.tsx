@@ -1,4 +1,4 @@
-import { type FretMark, Fretboard } from '../components/Fretboard';
+import { type FretMark, Fretboard, Legend, chordToneKind } from '../components/Fretboard';
 import { Radio } from '../components/Shell';
 import { Staff } from '../components/Staff';
 import { ScaleExplain } from '../exercises/ScaleQuiz';
@@ -7,7 +7,7 @@ import { ExploreChords } from './ExploreChords';
 import { useSettings, useStored } from '../store';
 import { type FretPos, positionsOf, soundingMidi } from '../theory/guitar';
 import { pentatonicBox } from '../theory/positions';
-import { noteName, pcKey, pitchClass } from '../theory/notes';
+import { mod, noteName, pcKey, pitchClass } from '../theory/notes';
 import {
   type ScaleType,
   ROMAN,
@@ -60,9 +60,12 @@ function ExploreScales() {
   const relType = RELATIVE_TYPE[st.type];
   const label = (d: number) =>
     st.labels === 'notes' ? noteName(scale[d], naming) : pent ? degreeLabel(st.type, d) : String(d + 1);
+  // Tonica, terza e quinta della scala colorate come le note dell'accordo di tonica.
+  const stepFromTonic = (d: number) => mod(scale[d].letter - tonic.letter, 7);
+  const thirdIsMinor = mod(pitchClass(scale.find((_, d) => stepFromTonic(d) === 2)!) - pitchClass(tonic), 12) === 3;
   const mark = (pos: FretPos, d: number): FretMark => ({
     pos,
-    kind: d === 0 ? 'root' : 'note',
+    kind: chordToneKind([0, 2, 4].indexOf(stepFromTonic(d))),
     label: label(d),
   });
 
@@ -150,11 +153,13 @@ function ExploreScales() {
           />
         )}
         <Fretboard maxFret={maxFret} marks={marks} />
-        <p class="hint">
-          La tonica è evidenziata.
-          {box > 0 &&
-            ' Due note per corda; la posizione 1 parte dalla tonica sul Mi basso e ogni posizione comincia dove finisce la precedente.'}
-        </p>
+        <Legend labels={['1 tonica', `${thirdIsMinor ? '♭3' : '3'} terza`, '5 quinta']} other="altre note della scala" />
+        {box > 0 && (
+          <p class="hint">
+            Due note per corda; la posizione 1 parte dalla tonica sul Mi basso e ogni posizione comincia dove finisce la precedente.
+            Tonica, terza e quinta formano l'accordo di tonica: è la forma CAGED nascosta dentro il box.
+          </p>
+        )}
       </section>
     </>
   );

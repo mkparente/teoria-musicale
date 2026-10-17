@@ -1,4 +1,4 @@
-import { type FretMark, Fretboard } from '../components/Fretboard';
+import { type FretMark, Fretboard, Legend, chordToneKind } from '../components/Fretboard';
 import { Radio } from '../components/Shell';
 import { Staff } from '../components/Staff';
 import { triadRecipe } from '../exercises/TriadQuiz';
@@ -56,7 +56,7 @@ export function ExploreChords() {
     const seen = new Set<string>();
     return positions
       .filter((p) => !seen.has(`${p.string}-${p.fret}`) && seen.add(`${p.string}-${p.fret}`))
-      .map((pos) => ({ pos, kind: soundingMidi(pos) % 12 === tones[0] ? 'root' : 'note', label: label(pos) }));
+      .map((pos) => ({ pos, kind: chordToneKind(tones.indexOf(soundingMidi(pos) % 12)), label: label(pos) }));
   };
 
   let marks: FretMark[] = [];
@@ -178,6 +178,11 @@ export function ExploreChords() {
           onChange={(labels) => set({ labels })}
         />
         <Fretboard maxFret={maxFret} marks={marks} region={region} activeStrings={activeStrings} />
+        <Legend
+          labels={
+            QUALITIES[st.quality].labels.map((l, i) => `${l} ${['fondamentale', 'terza', 'quinta'][i]}`) as [string, string, string]
+          }
+        />
         {notes.map((n) => (
           <p class="hint" key={n}>
             {n}

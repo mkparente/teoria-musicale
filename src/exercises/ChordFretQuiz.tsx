@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { type FretMark, Fretboard } from '../components/Fretboard';
+import { type FretMark, Fretboard, chordToneKind } from '../components/Fretboard';
 import { Choices } from '../components/NotePicker';
 import { Feedback, Shell, Toggles } from '../components/Shell';
 import { useSettings, useStored } from '../store';
@@ -165,7 +165,7 @@ function QuestionView({ q, outcome, finish, next }: ViewProps) {
   const reveal = (positions: FretPos[]): FretMark[] =>
     positions.map((pos) => ({
       pos,
-      kind: degreeOf(pos) === 0 ? 'root' : 'note',
+      kind: chordToneKind(degreeOf(pos)),
       label: QUALITIES[q.q].labels[degreeOf(pos)],
     }));
   const marksFor = (right: string | number) => [

@@ -8,6 +8,11 @@
   --accent: #2f5d50;
   --accent-fg: #ffffff;
   --gold: #c98a16;
+  /* Note dell'accordo sul manico: fondamentale (--gold), terza, quinta, altre note della scala. */
+  --third: #7a4cc2;
+  --fifth: #2a6fb8;
+  --other: #a59f93;
+  --chord-fg: #ffffff;
   --ok: #2e8b57;
   --ok-bg: #e3f3e9;
   --bad: #c0392b;
@@ -30,6 +35,10 @@
     --accent: #7cc4ad;
     --accent-fg: #10221c;
     --gold: #f2b84b;
+    --third: #b996f5;
+    --fifth: #74b0ee;
+    --other: #5d6370;
+    --chord-fg: #14161b;
     --ok: #5fcf8f;
     --ok-bg: #1c3427;
     --bad: #ff7b6b;
@@ -519,6 +528,20 @@ h1 {
 .fb-root circle {
   fill: var(--gold);
 }
+.fb-root text,
+.fb-third text,
+.fb-fifth text {
+  fill: var(--chord-fg);
+}
+.fb-third circle {
+  fill: var(--third);
+}
+.fb-fifth circle {
+  fill: var(--fifth);
+}
+.fb-other circle {
+  fill: var(--other);
+}
 .fb-note circle {
   fill: var(--accent);
 }
@@ -632,3 +655,30 @@ h1 {
 .tones small {
   color: var(--muted);
 }
+
+/* Legenda dei colori del manico */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.legend .lg-root { background: var(--gold); }
+.legend .lg-third { background: var(--third); }
+.legend .lg-fifth { background: var(--fifth); }
+.legend .lg-other { background: var(--other); }

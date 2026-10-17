@@ -4,7 +4,8 @@ import { useWidth } from './useWidth';
 
 export interface FretMark {
   pos: FretPos;
-  kind: 'ok' | 'bad' | 'hint' | 'root' | 'note' | 'target';
+  /** root/third/fifth/other: ruolo della nota nell'accordo; note: pallino neutro, senza svelare il ruolo. */
+  kind: 'ok' | 'bad' | 'hint' | 'root' | 'third' | 'fifth' | 'other' | 'note' | 'target';
   label?: string;
 }
 
@@ -147,5 +148,28 @@ export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS,
         </svg>
       )}
     </div>
+  );
+}
+
+/** Ruolo di una nota rispetto all'accordo: 0 = fondamentale, 1 = terza, 2 = quinta, altro = nota della scala. */
+export const chordToneKind = (i: number): FretMark['kind'] => (['root', 'third', 'fifth'] as const)[i] ?? 'other';
+
+/** Legenda dei colori di fondamentale, terza e quinta. */
+export function Legend({ labels, other }: { labels: [string, string, string]; other?: string }) {
+  const items: [string, string][] = [
+    ['root', labels[0]],
+    ['third', labels[1]],
+    ['fifth', labels[2]],
+    ...(other ? [['other', other] as [string, string]] : []),
+  ];
+  return (
+    <ul class="legend">
+      {items.map(([k, label]) => (
+        <li key={k}>
+          <i class={`lg-${k}`} />
+          {label}
+        </li>
+      ))}
+    </ul>
   );
 }
