@@ -7,7 +7,9 @@ App personale (PWA) per studiare teoria musicale con la chitarra, in vista delle
 - **Oggi**: la sessione del giorno, costruita sul tempo a disposizione (10, 20, 30 o 45 minuti). È fatta di blocchi:
   - **ripasso** degli elementi in scadenza;
   - **nuovo**: i quiz dell'unità corrente del programma;
-  - **chitarra in mano**: un'attività con istruzioni, disegno sul manico, timer e autovalutazione.
+  - **chitarra in mano**: un'attività con istruzioni, disegno sul manico, timer e autovalutazione (si può escludere con "Chitarra: non ce l'ho", per quando sei in viaggio).
+
+  I blocchi di quiz durano al massimo 5 minuti.
 
   Se la interrompi, la riprendi dal punto in cui eri.
 - **Programma**: 18 unità in 6 blocchi, da ottobre 2026 ad agosto 2027 (5 sessioni da 20 minuti a settimana). Ogni unità dice perché si studia e qual è l'obiettivo. Un'unità si considera acquisita quando il 70% dei suoi elementi è consolidato. Il programma suggerisce, non blocca: puoi scegliere un'unità a mano o segnarla come completata. I contenuti stanno in `src/program/curriculum.ts`.

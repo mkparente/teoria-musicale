@@ -45,9 +45,11 @@ export interface Settings {
   autoAdvance: boolean;
   /** Durata abituale della sessione di oggi, in minuti. */
   sessionMinutes: number;
+  /** Falso quando sei in viaggio senza strumento: la sessione salta le attività con la chitarra. */
+  withGuitar: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { naming: 'it', autoAdvance: true, sessionMinutes: 20 };
+export const DEFAULT_SETTINGS: Settings = { naming: 'it', autoAdvance: true, sessionMinutes: 20, withGuitar: true };
 
 export const useSettings = () => useStored<Settings>('settings', DEFAULT_SETTINGS);
 

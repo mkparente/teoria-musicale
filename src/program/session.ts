@@ -25,6 +25,8 @@ export interface BlockResult {
 export interface Plan {
   date: string;
   minutes: number;
+  /** Falso quando sei senza chitarra: niente blocchi con lo strumento. */
+  withGuitar: boolean;
   unitId: string;
   blocks: Block[];
   results: BlockResult[];
@@ -50,11 +52,19 @@ const isGuitarDue = (id: string) => {
   return !s || s.due <= Date.now();
 };
 
+/** Un blocco di quiz non dura più di così: meglio più blocchi brevi e vari. */
+export const MAX_QUIZ_MINUTES = 5;
+
+type AvailableQuiz = QuizActivity & { exercise: ExerciseKey };
+const quizzesOf = (unitIndex: number) =>
+  UNITS[unitIndex].activities.filter((a): a is AvailableQuiz => a.type === 'quiz' && isAvailable(a.exercise));
+
 /**
  * Compone la sessione: un po' di ripasso degli elementi in scadenza, la parte nuova
- * dell'unità corrente e un'attività con la chitarra. `day` serve a far ruotare le attività.
+ * dell'unità corrente e, se hai la chitarra con te, un'attività con lo strumento.
+ * `day` serve a far ruotare le attività da un giorno all'altro.
  */
-export function buildPlan(minutes: number, state: ProgramState, day: number): Plan {
+export function buildPlan(minutes: number, state: ProgramState, day: number, withGuitar = true): Plan {
   const now = Date.now();
   const db = getDb();
   const unitIndex = currentUnitIndex(state);
@@ -95,7 +105,7 @@ export function buildPlan(minutes: number, state: ProgramState, day: number): Pl
   // 2. Chitarra in mano: prima le attività dell'unità mai fatte o da rivedere,
   //    a giorni alterni un ripasso di un'unità precedente se ce n'è uno in scadenza.
   let guitar: { activity: GuitarActivity; unitId: string } | null = null;
-  if (minutes >= 15) {
+  if (withGuitar && minutes >= 15) {
     const own = unit.activities.filter((a): a is GuitarActivity => a.type === 'guitar');
     const previous = UNITS.slice(0, unitIndex).flatMap((u) =>
       u.activities.filter((a): a is GuitarActivity => a.type === 'guitar').map((activity) => ({ activity, unitId: u.id })),
@@ -110,32 +120,29 @@ export function buildPlan(minutes: number, state: ProgramState, day: number): Pl
   }
   const guitarMinutes = guitar ? Math.min(guitar.activity.minutes, Math.round(minutes * 0.35)) : 0;
 
-  // 3. Nuovo: i quiz dell'unità, a rotazione. Se l'unità non ne ha ancora, si consolida la precedente.
+  // 3. Nuovo: i quiz dell'unità a rotazione, in blocchi brevi. Se il tempo avanza,
+  //    si consolidano i quiz delle unità precedenti; solo in mancanza di quelli si ripete.
   const remaining = Math.max(3, minutes - reviewBudget - guitarMinutes);
-  let quizzes = unit.activities.filter((a): a is QuizActivity & { exercise: ExerciseKey } => a.type === 'quiz' && isAvailable(a.exercise));
-  let role: 'nuovo' | 'consolida' = 'nuovo';
-  if (!quizzes.length) {
-    role = 'consolida';
-    for (let i = unitIndex - 1; i >= 0 && !quizzes.length; i--) {
-      quizzes = UNITS[i].activities.filter((a): a is QuizActivity & { exercise: ExerciseKey } => a.type === 'quiz' && isAvailable(a.exercise));
-    }
-  }
-  const n = quizzes.length > 1 && remaining >= 10 ? 2 : Math.min(1, quizzes.length);
-  for (let i = 0; i < n; i++) {
-    const a = quizzes[(day + i) % quizzes.length];
-    blocks.push({
-      type: 'quiz',
-      role,
-      exercise: a.exercise,
-      title: a.title,
-      minutes: Math.max(3, Math.floor(remaining / n)),
-      config: a.config,
-    });
+  const chunks = Math.max(1, Math.ceil(remaining / MAX_QUIZ_MINUTES));
+  const own = quizzesOf(unitIndex);
+  const rotated = own.map((_, i) => own[(day + i) % own.length]);
+  const previous: AvailableQuiz[] = [];
+  for (let i = unitIndex - 1; i >= 0; i--) previous.push(...quizzesOf(i));
+  const sequence: { a: AvailableQuiz; role: 'nuovo' | 'consolida' }[] = [
+    ...rotated.map((a) => ({ a, role: 'nuovo' as const })),
+    ...previous.map((a) => ({ a, role: 'consolida' as const })),
+  ];
+  for (let i = 0; i < chunks && sequence.length; i++) {
+    const { a, role } = sequence[i % sequence.length];
+    // Il tempo si divide in parti uguali; i primi blocchi prendono i minuti che avanzano.
+    const mins = Math.floor(remaining / chunks) + (i < remaining % chunks ? 1 : 0);
+    const again = i >= sequence.length ? ' · secondo giro' : '';
+    blocks.push({ type: 'quiz', role, exercise: a.exercise, title: a.title + again, minutes: mins, config: a.config });
   }
 
   if (guitar) blocks.push({ type: 'guitar', role: 'chitarra', unitId: guitar.unitId, activity: guitar.activity, minutes: guitarMinutes });
 
-  return { date: todayKey(), minutes, unitId: unit.id, blocks, results: [] };
+  return { date: todayKey(), minutes, withGuitar, unitId: unit.id, blocks, results: [] };
 }
 
 export const planMinutes = (p: Plan) => p.blocks.reduce((s, b) => s + b.minutes, 0);

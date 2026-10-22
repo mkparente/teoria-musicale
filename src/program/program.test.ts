@@ -41,6 +41,17 @@ describe('programma', () => {
       expect(planMinutes(plan)).toBeLessThanOrEqual(minutes + 2);
       expect(planMinutes(plan)).toBeGreaterThanOrEqual(minutes - 3);
       if (minutes >= 15) expect(plan.blocks.some((b) => b.type === 'guitar')).toBe(true);
+      // Nessun blocco di quiz supera i 5 minuti.
+      for (const b of plan.blocks) if (b.type === 'quiz') expect(b.minutes).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it('senza chitarra la sessione è fatta solo di quiz, nello stesso tempo', () => {
+    for (const minutes of [10, 20, 30, 45]) {
+      const plan = buildPlan(minutes, DEFAULT_PROGRAM, 0, false);
+      expect(plan.blocks.every((b) => b.type === 'quiz')).toBe(true);
+      expect(planMinutes(plan)).toBeLessThanOrEqual(minutes + 2);
+      expect(planMinutes(plan)).toBeGreaterThanOrEqual(minutes - 3);
     }
   });
 });

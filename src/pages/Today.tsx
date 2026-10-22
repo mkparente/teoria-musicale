@@ -74,10 +74,13 @@ export function Today() {
   const stale =
     !plan ||
     plan.date !== today ||
-    (plan.results.length === 0 && (plan.minutes !== settings.sessionMinutes || plan.unitId !== unit.id));
+    (plan.results.length === 0 &&
+      (plan.minutes !== settings.sessionMinutes ||
+        plan.unitId !== unit.id ||
+        (plan.withGuitar ?? true) !== settings.withGuitar));
   useEffect(() => {
-    if (stale) setPlan(buildPlan(settings.sessionMinutes, program, Object.keys(log).length));
-  }, [stale, settings.sessionMinutes]);
+    if (stale) setPlan(buildPlan(settings.sessionMinutes, program, Object.keys(log).length, settings.withGuitar));
+  }, [stale, settings.sessionMinutes, settings.withGuitar]);
 
   const week = currentWeekDays();
   const doneThisWeek = week.filter((d) => log[d]?.completed).length;
@@ -120,13 +123,35 @@ export function Today() {
             ))}
           </div>
         )}
+        {!started && (
+          <div class="minutes" role="radiogroup" aria-label="Chitarra">
+            <span class="muted">Chitarra</span>
+            {[
+              { value: true, label: 'Con me' },
+              { value: false, label: 'Non ce l’ho' },
+            ].map((o) => (
+              <button
+                key={o.label}
+                role="radio"
+                aria-checked={settings.withGuitar === o.value}
+                class={`chip ${settings.withGuitar === o.value ? 'on' : ''}`}
+                onClick={() => setSettings({ ...settings, withGuitar: o.value })}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {!settings.withGuitar && (
+          <p class="hint">Senza chitarra: solo quiz nell'app, le attività con lo strumento le recuperi quando torni.</p>
+        )}
         {plan && !stale && <BlockList plan={plan} />}
         {finished ? (
           <div class="done-box">
             <p>
               <b>Sessione di oggi completata.</b> Domani si riparte da qui.
             </p>
-            <button class="secondary" onClick={() => setPlan(buildPlan(10, program, Object.keys(log).length + 1))}>
+            <button class="secondary" onClick={() => setPlan(buildPlan(10, program, Object.keys(log).length + 1, settings.withGuitar))}>
               Altri 10 minuti
             </button>
           </div>
