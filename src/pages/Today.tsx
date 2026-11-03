@@ -9,8 +9,9 @@ import {
   programWeek,
   scheduleDelta,
   todayKey,
+  unitCounts,
   unitHasFutureParts,
-  unitProgress,
+  waitingUnitsBefore,
   useLog,
   useProgram,
 } from '../program/progress';
@@ -85,7 +86,10 @@ export function Today() {
   const week = currentWeekDays();
   const doneThisWeek = week.filter((d) => log[d]?.completed).length;
   const delta = scheduleDelta(program);
-  const progress = Math.round(unitProgress(unit) * 100);
+  // La barra misura la strada verso la soglia di acquisizione, non verso il totale.
+  const counts = unitCounts(unit);
+  const progress = Math.min(100, Math.round((100 * counts.solid) / Math.max(1, counts.needed)));
+  const waiting = waitingUnitsBefore(program);
   const started = plan && !stale && plan.results.length > 0;
   const finished = plan && !stale && plan.results.length >= plan.blocks.length;
   const dateLabel = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -194,8 +198,15 @@ export function Today() {
           <span style={{ width: `${progress}%` }} />
         </div>
         <p class="muted small">
-          {progress}% acquisito{unitHasFutureParts(unit) ? ' · alcune parti sono in arrivo' : ''}
+          {counts.solid} elementi consolidati su {counts.needed} necessari ({counts.total} in tutto)
+          {unitHasFutureParts(unit) ? ' · alcune parti sono in arrivo' : ''}
         </p>
+        {waiting.length > 0 && (
+          <p class="muted small">
+            In attesa dell'esercizio: {waiting.map((u) => u.title).join(', ')}. Intanto si va avanti; le attività con la
+            chitarra di queste unità restano nelle sessioni.
+          </p>
+        )}
       </a>
 
       <p class="center">

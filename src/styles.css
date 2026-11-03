@@ -1168,3 +1168,7 @@ a.secondary {
 .ex-settings .panel-title {
   margin-bottom: 10px;
 }
+.unit-waiting .unit-mark {
+  background: none;
+  border: 2px dashed var(--line);
+}

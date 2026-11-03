@@ -79,6 +79,25 @@ const pickAmong = <T,>(xs: T[], n: number) => xs[Math.floor(Math.random() * Math
  * gli elementi nuovi vengono introdotti in quell'ordine.
  */
 export function pickNext(pool: string[], recent: string[]): string {
+  return pickNextInfo(pool, recent).id;
+}
+
+/** Da questa scatola in su un elemento non va più allenato oggi: si rivedrà nei prossimi giorni. */
+const SETTLED_BOX = 3;
+
+/**
+ * Come pickNext, ma dice anche se nel gruppo c'è ancora qualcosa da fare oggi.
+ * `settled` è vero quando niente è in scadenza, niente è nuovo e tutto è già consolidato:
+ * continuare servirebbe solo a ripetere cose che sai.
+ */
+export function pickNextInfo(pool: string[], recent: string[]): { id: string; settled: boolean } {
+  const id = choose(pool, recent);
+  const now = Date.now();
+  const settled = pool.every((x) => db[x] && db[x].due > now && db[x].box >= SETTLED_BOX);
+  return { id, settled };
+}
+
+function choose(pool: string[], recent: string[]): string {
   if (pool.length === 0) throw new Error('Nessun esercizio disponibile con queste impostazioni');
   const now = Date.now();
   const avoid = new Set(recent.slice(-Math.min(3, pool.length - 1)));

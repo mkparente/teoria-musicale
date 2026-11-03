@@ -9,7 +9,7 @@ import {
   programWeek,
   scheduleDelta,
   unitHasFutureParts,
-  unitProgress,
+  unitCounts,
   unitStartDate,
   unitStatus,
   useProgram,
@@ -91,7 +91,8 @@ function UnitRow({
   setProgram: (p: ProgramState) => void;
 }) {
   const status = unitStatus(unit, index, program, current);
-  const progress = Math.round(unitProgress(unit) * 100);
+  const counts = unitCounts(unit);
+  const progress = Math.min(100, Math.round((100 * counts.solid) / Math.max(1, counts.needed)));
   const markedDone = program.done.includes(unit.id);
 
   return (
@@ -105,7 +106,7 @@ function UnitRow({
           <span class="muted small">
             {unit.period} · {unit.weeks} sett. · dal {fmtDate(unitStartDate(program, index))}
             {status === 'current' && ' · in corso'}
-            {unitHasFutureParts(unit) && ' · parti in arrivo'}
+            {status === 'waiting' ? ' · in attesa dell’esercizio' : unitHasFutureParts(unit) && ' · parti in arrivo'}
           </span>
           <span class="bar thin">
             <span style={{ width: `${progress}%` }} />
@@ -172,8 +173,10 @@ function UnitRow({
             )}
           </div>
           <p class="muted small">
-            L'unità si considera acquisita quando il 70% di quello che contiene è consolidato, cioè risposto bene più volte a
-            distanza di giorni.
+            {counts.solid} elementi consolidati su {counts.needed} necessari ({counts.total} in tutto). Un elemento è
+            consolidato quando lo indovini 3 volte di fila a distanza di tempo; l'unità è acquisita al 70%.
+            {status === 'waiting' &&
+              ' I quiz di questa unità non ci sono ancora: per ora si va avanti e la riprendi quando arrivano.'}
           </p>
         </div>
       )}

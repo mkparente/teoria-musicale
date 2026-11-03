@@ -55,3 +55,16 @@ describe('programma', () => {
     }
   });
 });
+
+describe('unità in attesa', () => {
+  it('un\'unità senza quiz disponibili viene saltata e la sua chitarra resta in sessione', () => {
+    // Con le prime tre unità completate, la 4 (intervalli, non ancora pronta) va saltata.
+    const state = { ...DEFAULT_PROGRAM, done: ['u01', 'u02', 'u03'] };
+    const u04 = UNITS.findIndex((u) => u.id === 'u04');
+    const hasIntervals = UNITS[u04].activities.some((a) => a.type === 'quiz' && isAvailable(a.exercise));
+    if (hasIntervals) return; // quando l'esercizio Intervalli esisterà, l'unità 4 non sarà più in attesa
+    expect(UNITS[currentUnitIndex(state)].id).toBe('u05');
+    const plan = buildPlan(20, state, 0);
+    expect(plan.blocks.some((b) => b.type === 'guitar' && b.unitId === 'u04')).toBe(true);
+  });
+});

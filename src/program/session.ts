@@ -1,7 +1,7 @@
-import { EXERCISE_LIST, GUITAR_PREFIX, isAvailable } from '../exercises/registry';
+import { EXERCISE_LIST, GUITAR_PREFIX, activityPool, isAvailable } from '../exercises/registry';
 import { getDb } from '../srs/srs';
 import { type ExerciseKey, type GuitarActivity, type QuizActivity, UNITS } from './curriculum';
-import { type ProgramState, currentUnitIndex, todayKey } from './progress';
+import { type ProgramState, currentUnitIndex, todayKey, waitingUnitsBefore } from './progress';
 
 export type Block =
   | {
@@ -59,6 +59,13 @@ type AvailableQuiz = QuizActivity & { exercise: ExerciseKey };
 const quizzesOf = (unitIndex: number) =>
   UNITS[unitIndex].activities.filter((a): a is AvailableQuiz => a.type === 'quiz' && isAvailable(a.exercise));
 
+/** Vero se nell'attività c'è ancora qualcosa da fare: elementi nuovi, in scadenza o non ancora consolidati. */
+function hasWork(a: AvailableQuiz): boolean {
+  const db = getDb();
+  const now = Date.now();
+  return activityPool(a.exercise, a.config).some((id) => !db[id] || db[id].due <= now || db[id].box < 3);
+}
+
 /**
  * Compone la sessione: un po' di ripasso degli elementi in scadenza, la parte nuova
  * dell'unità corrente e, se hai la chitarra con te, un'attività con lo strumento.
@@ -102,32 +109,36 @@ export function buildPlan(minutes: number, state: ProgramState, day: number, wit
   }
   reviewBudget = reviewUsed;
 
-  // 2. Chitarra in mano: prima le attività dell'unità mai fatte o da rivedere,
-  //    a giorni alterni un ripasso di un'unità precedente se ce n'è uno in scadenza.
+  // 2. Chitarra in mano: prima le attività dell'unità (e di quelle saltate perché in attesa)
+  //    mai fatte o fatte da più tempo; a giorni alterni il ripasso di un'attività già fatta.
   let guitar: { activity: GuitarActivity; unitId: string } | null = null;
   if (withGuitar && minutes >= 15) {
-    const own = unit.activities.filter((a): a is GuitarActivity => a.type === 'guitar');
-    const previous = UNITS.slice(0, unitIndex).flatMap((u) =>
-      u.activities.filter((a): a is GuitarActivity => a.type === 'guitar').map((activity) => ({ activity, unitId: u.id })),
-    );
+    const guitarOf = (u: (typeof UNITS)[number]) =>
+      u.activities.filter((a): a is GuitarActivity => a.type === 'guitar').map((activity) => ({ activity, unitId: u.id }));
+    const own = [...waitingUnitsBefore(state), unit].flatMap(guitarOf);
+    const previous = UNITS.slice(0, unitIndex).flatMap(guitarOf);
     const prevDue = previous.filter((p) => isGuitarDue(p.activity.id) && db[GUITAR_PREFIX + p.activity.id]);
     const ownSorted = [...own].sort(
-      (a, b) => (db[GUITAR_PREFIX + a.id]?.last ?? 0) - (db[GUITAR_PREFIX + b.id]?.last ?? 0),
+      (a, b) => (db[GUITAR_PREFIX + a.activity.id]?.last ?? 0) - (db[GUITAR_PREFIX + b.activity.id]?.last ?? 0),
     );
-    if (prevDue.length && day % 2 === 1) guitar = prevDue[day % prevDue.length];
-    else if (ownSorted.length) guitar = { activity: ownSorted[0], unitId: unit.id };
+    const ownNever = ownSorted.filter((o) => !db[GUITAR_PREFIX + o.activity.id]);
+    if (ownNever.length) guitar = ownNever[0];
+    else if (prevDue.length && day % 2 === 1) guitar = prevDue[day % prevDue.length];
+    else if (ownSorted.length) guitar = ownSorted[0];
     else if (prevDue.length) guitar = prevDue[0];
   }
   const guitarMinutes = guitar ? Math.min(guitar.activity.minutes, Math.round(minutes * 0.35)) : 0;
 
-  // 3. Nuovo: i quiz dell'unità a rotazione, in blocchi brevi. Se il tempo avanza,
-  //    si consolidano i quiz delle unità precedenti; solo in mancanza di quelli si ripete.
+  // 3. Nuovo: i quiz dell'unità a rotazione, in blocchi brevi, saltando quelli già consolidati.
+  //    Se il tempo avanza, si consolidano i quiz delle unità precedenti che hanno ancora qualcosa da fare;
+  //    solo in mancanza di quelli si ripete.
   const remaining = Math.max(3, minutes - reviewBudget - guitarMinutes);
   const chunks = Math.max(1, Math.ceil(remaining / MAX_QUIZ_MINUTES));
-  const own = quizzesOf(unitIndex);
+  const allOwn = quizzesOf(unitIndex);
+  const own = allOwn.filter(hasWork).length ? allOwn.filter(hasWork) : allOwn;
   const rotated = own.map((_, i) => own[(day + i) % own.length]);
   const previous: AvailableQuiz[] = [];
-  for (let i = unitIndex - 1; i >= 0; i--) previous.push(...quizzesOf(i));
+  for (let i = unitIndex - 1; i >= 0; i--) previous.push(...quizzesOf(i).filter(hasWork));
   const sequence: { a: AvailableQuiz; role: 'nuovo' | 'consolida' }[] = [
     ...rotated.map((a) => ({ a, role: 'nuovo' as const })),
     ...previous.map((a) => ({ a, role: 'consolida' as const })),

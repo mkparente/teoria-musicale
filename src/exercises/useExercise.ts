@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { pickNext, record } from '../srs/srs';
+import { pickNextInfo, record } from '../srs/srs';
 import { useSettings, useStored } from '../store';
 
 export interface Outcome {
@@ -73,7 +73,12 @@ export function useExercise<Q>(
       return;
     }
     try {
-      const id = pickNext(pool, recent.current);
+      const { id, settled } = pickNextInfo(pool, recent.current);
+      // In una sessione, se qui è già tutto consolidato si passa al blocco successivo invece di ripetere.
+      if (run.onEnd && settled && s.done > 0) {
+        run.onEnd(s);
+        return;
+      }
       recent.current = [...recent.current.slice(-5), id];
       setCurrent({ id, q: make(id), start: performance.now(), n: ++counter.current });
       setOutcome(null);

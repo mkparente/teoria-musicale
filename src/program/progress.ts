@@ -33,32 +33,55 @@ export function unitItems(unit: Unit): string[] {
   return [...ids];
 }
 
-export function unitProgress(unit: Unit): number {
-  const db = getDb();
+export const isSolid = (id: string) =>
+  (getDb()[id]?.box ?? 0) >= (id.startsWith(GUITAR_PREFIX) ? SOLID_BOX_GUITAR : SOLID_BOX);
+
+/** Quanti elementi dell'unità sono consolidati e quanti ne servono per considerarla acquisita. */
+export function unitCounts(unit: Unit): { solid: number; total: number; needed: number } {
   const items = unitItems(unit);
-  if (!items.length) return 0;
-  const solid = items.filter((id) => (db[id]?.box ?? 0) >= (id.startsWith(GUITAR_PREFIX) ? SOLID_BOX_GUITAR : SOLID_BOX));
-  return solid.length / items.length;
+  return {
+    solid: items.filter(isSolid).length,
+    total: items.length,
+    needed: Math.ceil(items.length * UNIT_THRESHOLD),
+  };
+}
+
+export function unitProgress(unit: Unit): number {
+  const { solid, total } = unitCounts(unit);
+  return total ? solid / total : 0;
 }
 
 export const unitHasFutureParts = (unit: Unit) =>
   unit.activities.some((a) => a.type === 'quiz' && !isAvailable(a.exercise));
 
-export type UnitStatus = 'done' | 'current' | 'todo';
+/** Un'unità i cui quiz non esistono ancora resta "in attesa": si va avanti e la si riprende quando arrivano. */
+export const unitIsWaiting = (unit: Unit) =>
+  !unit.activities.some((a) => a.type === 'quiz' && isAvailable(a.exercise));
 
-/** L'unità su cui lavorare: quella scelta a mano, oppure la prima non ancora acquisita. */
+export type UnitStatus = 'done' | 'current' | 'todo' | 'waiting';
+
+const isAcquired = (unit: Unit, state: ProgramState) =>
+  state.done.includes(unit.id) || unitProgress(unit) >= UNIT_THRESHOLD;
+
+/** L'unità su cui lavorare: quella scelta a mano, oppure la prima non ancora acquisita che si può studiare. */
 export function currentUnitIndex(state: ProgramState): number {
   if (state.focus) {
     const i = UNITS.findIndex((u) => u.id === state.focus);
     if (i >= 0) return i;
   }
-  const i = UNITS.findIndex((u) => !state.done.includes(u.id) && unitProgress(u) < UNIT_THRESHOLD);
+  const i = UNITS.findIndex((u) => !isAcquired(u, state) && !unitIsWaiting(u));
   return i < 0 ? UNITS.length - 1 : i;
+}
+
+/** Unità saltate perché in attesa, prima di quella corrente: le loro attività con la chitarra restano valide. */
+export function waitingUnitsBefore(state: ProgramState): Unit[] {
+  return UNITS.slice(0, currentUnitIndex(state)).filter((u) => !isAcquired(u, state) && unitIsWaiting(u));
 }
 
 export function unitStatus(unit: Unit, index: number, state: ProgramState, current: number): UnitStatus {
   if (index === current) return 'current';
-  if (state.done.includes(unit.id) || unitProgress(unit) >= UNIT_THRESHOLD) return 'done';
+  if (isAcquired(unit, state)) return 'done';
+  if (unitIsWaiting(unit)) return 'waiting';
   return 'todo';
 }
 

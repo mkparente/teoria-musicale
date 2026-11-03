@@ -208,8 +208,9 @@ export const UNITS: Unit[] = [
     period: 'gennaio',
     weeks: 3,
     why: 'L\'armatura ti dice subito quali note usare in una tonalità. Le relative spiegano perché La minore e Do maggiore hanno le stesse note: lo stesso vale per pentatonica minore e maggiore.',
-    goal: 'Armature delle tonalità maggiori e minori fino a 4 alterazioni, in tutte e due le direzioni, e le relative.',
+    goal: 'Scale maggiori fino a 4 alterazioni (La, Mi, Mi♭, La♭ si aggiungono alle cinque già note); armature delle tonalità maggiori e minori in tutte e due le direzioni; le relative.',
     activities: [
+      { type: 'quiz', exercise: 'scale', title: 'Scale maggiori fino a 4 alterazioni', config: { kinds: ['write', 'deg', 'which'], scales: ['major'], maxAcc: 4 } },
       { type: 'quiz', exercise: 'scale', title: 'Armature e relative', config: { kinds: ['sig', 'key', 'rel'], scales: ['major', 'natural'], maxAcc: 4 } },
       { type: 'quiz', exercise: 'lettura', title: 'Leggere con l\'armatura', config: { kind: 'keys', maxAcc: 3, guitarClef: true } },
       {
