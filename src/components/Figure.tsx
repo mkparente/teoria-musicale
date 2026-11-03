@@ -27,7 +27,7 @@ export function Figure({ spec }: { spec: FigureSpec }) {
     const scale = buildScale(tonic, spec.type);
     const pcs = scale.map(pitchClass);
     const step = (d: number) => mod(scale[d].letter - tonic.letter, 7);
-    let positions: FretPos[] = scale.flatMap((p) => positionsOf(pitchClass(p), 15));
+    let positions: FretPos[] = scale.flatMap((p) => positionsOf(pitchClass(p), 15, spec.strings));
     if (spec.box) positions = pentatonicBox(scale, spec.box);
     else if (spec.lo !== undefined) positions = positions.filter((p) => p.fret >= spec.lo! && p.fret <= spec.hi!);
     else positions = positions.filter((p) => p.fret <= 12);
@@ -61,7 +61,12 @@ export function Figure({ spec }: { spec: FigureSpec }) {
   const maxFret = Math.max(12, ...marks.map((m) => m.pos.fret));
   return (
     <div class="figure">
-      <Fretboard maxFret={maxFret} marks={marks} region={region} />
+      <Fretboard
+        maxFret={maxFret}
+        marks={marks}
+        region={region}
+        activeStrings={spec.kind === 'scale' || spec.kind === 'naturals' ? spec.strings : undefined}
+      />
       {legend && <Legend labels={legend} other={other} />}
     </div>
   );

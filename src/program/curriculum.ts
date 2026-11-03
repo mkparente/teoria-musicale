@@ -29,7 +29,7 @@ export interface QuizActivity {
 /** Disegno da mostrare accanto alle istruzioni di un'attività con la chitarra. */
 export type Figure =
   | { kind: 'naturals'; strings: GuitarString[] }
-  | { kind: 'scale'; type: ScaleType; tonic: string; box?: number; lo?: number; hi?: number }
+  | { kind: 'scale'; type: ScaleType; tonic: string; box?: number; lo?: number; hi?: number; strings?: GuitarString[] }
   | { kind: 'chord'; root: number; quality: 'maj' | 'min'; form: CagedForm }
   | { kind: 'triads'; root: number; quality: 'maj' | 'min'; set: number };
 
@@ -154,10 +154,12 @@ export const UNITS: Unit[] = [
         title: 'La scala maggiore su una corda',
         minutes: 5,
         steps: [
-          'Suona Do maggiore solo sulla 5ª corda: tasti 3, 5, 7, 8, 10, 12, 14, 15. Due tasti = tono, un tasto = semitono: T T S T T T S.',
-          'Poi Sol maggiore solo sulla 6ª corda: tasti 3, 5, 7, 8, 10, 12, 14, 15. Stesso disegno, perché lo schema di toni e semitoni è sempre lo stesso.',
-          'Di\' i nomi delle note mentre suoni (in Sol maggiore c\'è il Fa♯ al 14° tasto).',
+          'Suona Do maggiore solo sulla 5ª corda, da un Do al Do successivo: Do (3), Re (5), Mi (7), Fa (8), Sol (10), La (12), Si (14), Do (15).',
+          'Il Do compare due volte apposta: le note della scala sono sette, e l\'ottava (lo stesso Do, un\'ottava sopra) chiude il giro. Fermati lì e senti come "torna a casa".',
+          'Guarda le distanze: due tasti = tono, un tasto = semitono. Lo schema è T T S T T T S, con i semitoni tra Mi e Fa e tra Si e Do.',
+          'Poi Sol maggiore solo sulla 6ª corda, da Sol a Sol: tasti 3, 5, 7, 8, 10, 12, 14, 15. Stesso disegno, perché lo schema di toni e semitoni non cambia; qui al 14° tasto c\'è il Fa♯.',
         ],
+        figure: { kind: 'scale', type: 'major', tonic: '0', lo: 3, hi: 15, strings: [5] },
       },
       {
         type: 'guitar',
@@ -240,8 +242,8 @@ export const UNITS: Unit[] = [
         title: 'La minore e Do maggiore: stesse note',
         minutes: 5,
         steps: [
-          'Suona La minore naturale sulla 5ª corda: 0, 2, 3, 5, 7, 8, 10, 12.',
-          'Poi Do maggiore sulla stessa corda: 3, 5, 7, 8, 10, 12, 14, 15.',
+          'Suona La minore naturale sulla 5ª corda, da La a La: tasti 0, 2, 3, 5, 7, 8, 10, 12 (La, Si, Do, Re, Mi, Fa, Sol, La).',
+          'Poi Do maggiore sulla stessa corda, da Do a Do: tasti 3, 5, 7, 8, 10, 12, 14, 15.',
           'Le note sono le stesse, cambia il centro: fermati a lungo sulla tonica di ognuna e ascolta la differenza di atmosfera.',
         ],
       },
