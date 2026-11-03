@@ -15,6 +15,7 @@ App personale (PWA) per studiare teoria musicale con la chitarra, in vista delle
 - **Programma**: 18 unità in 6 blocchi, da ottobre 2026 ad agosto 2027 (5 sessioni da 20 minuti a settimana). Ogni unità dice perché si studia e qual è l'obiettivo. Un'unità si considera acquisita quando il 70% dei suoi elementi è consolidato. Il programma suggerisce, non blocca: puoi scegliere un'unità a mano o segnarla come completata. I contenuti stanno in `src/program/curriculum.ts`.
 - **Esercizi** (studio libero, ognuno con le sue opzioni):
   - **Scale** (maggiore, minori naturale/armonica/melodica, pentatoniche): gradi, armature, relative, scrivere la scala.
+  - **Intervalli** (dentro l'ottava, dalla 2ª minore all'8ª, tritono compreso): che intervallo è (due note sul rigo), costruisci l'intervallo (la seconda nota va scritta con la lettera giusta: Do → Mi♭ è una 3ª minore, Do → Re♯ una 2ª aumentata), sul manico (due note sulla tastiera, vale il suono reale). Gli intervalli si introducono in un ordine pensato per il blues: prima 3ª maggiore e minore, 5ª e 8ª, poi 4ª e 7ª minore, poi gli altri.
   - **Triadi**: costruirle, riconoscerle, fondamentale nei rivolti, triadi dei gradi.
   - **Lettura**: chiave di violino (anche con l'8 sotto, come per chitarra), con o senza armatura.
   - **Note sul manico**: nota su una corda, che nota è, tutte le posizioni.
@@ -33,7 +34,7 @@ npm test        # motore di teoria, programma e sessione
 npm run build
 ```
 
-- Il motore di teoria (`src/theory/`: note, scale, accordi, posizioni sul manico) non dipende dall'interfaccia. Le note sono scritte come lettera + alterazione + ottava, così le grafie sono sempre corrette (Fa♯ e non Sol♭ in Re maggiore).
+- Il motore di teoria (`src/theory/`: note, intervalli, scale, accordi, posizioni sul manico) non dipende dall'interfaccia. Le note sono scritte come lettera + alterazione + ottava, così le grafie sono sempre corrette (Fa♯ e non Sol♭ in Re maggiore).
 - La chitarra si scrive un'ottava sopra il suono reale: `src/theory/guitar.ts` lavora sui suoni reali, il rigo sulle note scritte.
 - Gli esercizi sono elencati in `src/exercises/registry.ts`. Ognuno accetta opzioni imposte, un elenco di elementi e un limite di tempo o di domande, così la sessione può usarli come blocchi.
 

@@ -3,6 +3,7 @@ import type { ExerciseKey } from '../program/curriculum';
 import type { Naming } from '../theory/notes';
 import * as Chords from './ChordFretQuiz';
 import * as Fret from './FretboardQuiz';
+import * as Interval from './IntervalQuiz';
 import * as Reading from './ReadingQuiz';
 import * as Scale from './ScaleQuiz';
 import * as Triad from './TriadQuiz';
@@ -10,7 +11,7 @@ import type { ExerciseProps } from './useExercise';
 
 export type IconName =
   | 'today' | 'program' | 'exercises' | 'explore' | 'progress' | 'settings'
-  | 'scale' | 'triad' | 'reading' | 'fretboard' | 'chords' | 'guitar' | 'review' | 'new' | 'back' | 'close' | 'sliders';
+  | 'scale' | 'interval' | 'triad' | 'reading' | 'fretboard' | 'chords' | 'guitar' | 'review' | 'new' | 'back' | 'close' | 'sliders';
 
 export interface ExerciseDef {
   key: ExerciseKey;
@@ -42,6 +43,18 @@ export const EXERCISES: Record<ExerciseKey, ExerciseDef> = {
     buildPool: Scale.buildPool,
     defaults: Scale.DEFAULT,
     describe: Scale.describe,
+  },
+  intervalli: {
+    key: 'intervalli',
+    title: 'Intervalli',
+    text: 'Riconoscere e costruire gli intervalli, sul rigo e sul manico.',
+    group: 'Teoria',
+    prefix: Interval.PREFIX,
+    icon: 'interval',
+    Component: Interval.IntervalQuiz,
+    buildPool: Interval.buildPool,
+    defaults: Interval.DEFAULT,
+    describe: Interval.describe,
   },
   triadi: {
     key: 'triadi',

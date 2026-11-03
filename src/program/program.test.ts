@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { activityPool, isAvailable } from '../exercises/registry';
 import { UNITS, totalWeeks } from './curriculum';
-import { DEFAULT_PROGRAM, currentUnitIndex, unitItems } from './progress';
+import { DEFAULT_PROGRAM, currentUnitIndex, unitIsWaiting, unitItems } from './progress';
 import { buildPlan, planMinutes } from './session';
 
 describe('programma', () => {
@@ -57,14 +57,20 @@ describe('programma', () => {
 });
 
 describe('unità in attesa', () => {
-  it('un\'unità senza quiz disponibili viene saltata e la sua chitarra resta in sessione', () => {
-    // Con le prime tre unità completate, la 4 (intervalli, non ancora pronta) va saltata.
-    const state = { ...DEFAULT_PROGRAM, done: ['u01', 'u02', 'u03'] };
-    const u04 = UNITS.findIndex((u) => u.id === 'u04');
-    const hasIntervals = UNITS[u04].activities.some((a) => a.type === 'quiz' && isAvailable(a.exercise));
-    if (hasIntervals) return; // quando l'esercizio Intervalli esisterà, l'unità 4 non sarà più in attesa
-    expect(UNITS[currentUnitIndex(state)].id).toBe('u05');
+  it("un'unità senza quiz disponibili viene saltata e la sua chitarra resta in sessione", () => {
+    // Con le prime otto unità completate, la 9 (accordi di settima e blues in 12 battute, non ancora pronti) va saltata.
+    const u09 = UNITS.findIndex((u) => u.id === 'u09');
+    expect(unitIsWaiting(UNITS[u09])).toBe(true);
+    const state = { ...DEFAULT_PROGRAM, done: UNITS.slice(0, u09).map((u) => u.id) };
+    const current = currentUnitIndex(state);
+    expect(current).toBeGreaterThan(u09);
+    expect(unitIsWaiting(UNITS[current])).toBe(false);
     const plan = buildPlan(20, state, 0);
-    expect(plan.blocks.some((b) => b.type === 'guitar' && b.unitId === 'u04')).toBe(true);
+    expect(plan.blocks.some((b) => b.type === 'guitar' && b.unitId === 'u09')).toBe(true);
+  });
+
+  it('gli intervalli sono pronti: dopo le prime tre unità si studia la 4', () => {
+    const state = { ...DEFAULT_PROGRAM, done: ['u01', 'u02', 'u03'] };
+    expect(UNITS[currentUnitIndex(state)].id).toBe('u04');
   });
 });

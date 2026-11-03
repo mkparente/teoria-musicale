@@ -6,11 +6,10 @@ import type { ScaleType } from '../theory/scales';
 // orientato al blues. Ogni unità ha un obiettivo, quiz nell'app e attività con la chitarra.
 
 /** Esercizi dell'app. Quelli non ancora costruiti compaiono nel programma come "in arrivo". */
-export type ExerciseKey = 'scale' | 'triadi' | 'manico' | 'accordi' | 'lettura';
-export type FutureExercise = 'intervalli' | 'settime' | 'blues12' | 'scalablues' | 'ritmo' | 'orecchio';
+export type ExerciseKey = 'scale' | 'intervalli' | 'triadi' | 'manico' | 'accordi' | 'lettura';
+export type FutureExercise = 'settime' | 'blues12' | 'scalablues' | 'ritmo' | 'orecchio';
 
 export const FUTURE_TITLES: Record<FutureExercise, string> = {
-  intervalli: 'Intervalli',
   settime: 'Accordi di settima',
   blues12: 'Blues in 12 battute',
   scalablues: 'Scala blues',
@@ -187,7 +186,8 @@ export const UNITS: Unit[] = [
     why: 'Un intervallo è la distanza tra due note. Triadi, accordi di settima e scale sono fatti di intervalli: nel blues contano soprattutto terza minore e maggiore, quinta e settima minore.',
     goal: 'Riconoscere e costruire gli intervalli dentro l\'ottava, sul rigo e sul manico.',
     activities: [
-      { type: 'quiz', exercise: 'intervalli', title: 'Riconosci e costruisci gli intervalli' },
+      { type: 'quiz', exercise: 'intervalli', title: 'Riconosci e costruisci gli intervalli', config: { kinds: ['name', 'build'], altered: false } },
+      { type: 'quiz', exercise: 'intervalli', title: 'Gli intervalli sul manico', config: { kinds: ['fret'] } },
       {
         type: 'guitar',
         id: 'u04-forme',
