@@ -172,7 +172,17 @@ function QuestionView({ q, outcome, finish, next }: ViewProps) {
   const [{ naming }] = useSettings();
   const [marks, setMarks] = useState<PickMark[]>([]);
   const [note, setNote] = useState<string | null>(null);
+  /** Pulsante premuto nelle domande a scelta: se è sbagliato si colora di rosso. */
+  const [picked, setPicked] = useState<number | null>(null);
   const n = (p: PitchClass) => noteName(p, naming);
+  const choiceMarks = (right: number) => [
+    { value: right, kind: 'ok' as const },
+    ...(picked !== null && picked !== right ? [{ value: picked, kind: 'bad' as const }] : []),
+  ];
+  const choose = (v: number, right: number) => {
+    setPicked(v);
+    finish(v === right);
+  };
 
   const answerNote = (picked: PitchClass, right: PitchClass) => {
     const ok = samePitchClass(picked, right);
@@ -207,8 +217,8 @@ function QuestionView({ q, outcome, finish, next }: ViewProps) {
             options={scale.map((_, i) => ({ value: i, label: degreeLabel(q.type, i) }))}
             columns={scale.length}
             disabled={!!outcome}
-            marks={outcome ? [{ value: q.d, kind: 'ok' as const }] : []}
-            onPick={(v) => finish(v === q.d)}
+            marks={outcome ? choiceMarks(q.d) : []}
+            onPick={(v) => choose(v, q.d)}
           />
         )}
         <Feedback outcome={outcome} onNext={next}>
@@ -236,8 +246,8 @@ function QuestionView({ q, outcome, finish, next }: ViewProps) {
           options={options}
           columns={5}
           disabled={!!outcome}
-          marks={outcome ? [{ value: sig, kind: 'ok' as const }] : []}
-          onPick={(v) => finish(v === sig)}
+          marks={outcome ? choiceMarks(sig) : []}
+          onPick={(v) => choose(v, sig)}
         />
         <Feedback outcome={outcome} onNext={next}>
           <SignatureExplain sig={sig} />
