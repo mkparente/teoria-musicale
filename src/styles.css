@@ -1260,3 +1260,45 @@ a.secondary {
 .mic .link-btn {
   padding: 2px 4px;
 }
+
+/* Mappa degli intervalli */
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 12px;
+}
+.iv-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.iv-row:first-of-type {
+  border-top: none;
+}
+.iv-dot {
+  flex: none;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 4px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--other);
+}
+.iv-dot.fb-third { background: var(--third); color: var(--chord-fg); }
+.iv-dot.fb-fifth { background: var(--fifth); color: var(--chord-fg); }
+.iv-dot.fb-note { background: var(--accent); color: var(--accent-fg); }
+.iv-ways {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.92rem;
+}
+.iv-row .hint {
+  margin-top: 4px;
+}

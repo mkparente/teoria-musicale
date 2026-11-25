@@ -1,4 +1,4 @@
-import { type GuitarString, soundingMidi } from './guitar';
+import { type FretPos, type GuitarString, STRINGS, soundingMidi } from './guitar';
 import { type Note, type PitchClass, type Letter, diatonicIndex, midi, mod, pitchClass, spell, stackUp } from './notes';
 
 // Intervalli dentro l'ottava. Il numero si conta con le lettere (Do-Re-Mi = 3ª),
@@ -133,7 +133,7 @@ export function shapeUsable(semis: number, kind: ShapeKind): boolean {
   return Math.abs(shapeOffset(semis, kind)) <= 3;
 }
 
-const COUNT_WORDS = ['', 'un', 'due', 'tre', 'quattro', 'cinque', 'sei', 'sette'];
+const COUNT_WORDS = ['', 'un', 'due', 'tre', 'quattro', 'cinque', 'sei', 'sette', 'otto', 'nove', 'dieci', 'undici', 'dodici'];
 
 export function offsetWords(offset: number): string {
   if (offset === 0) return 'stesso tasto';
@@ -153,4 +153,27 @@ export function mainShape(semis: number): [GuitarString, GuitarString] {
   if (semis <= 2) return [6, 6];
   if (semis <= 7) return [6, 5];
   return [6, 4];
+}
+
+/** Spostamento massimo (in tasti) per una nota su un'altra corda: oltre, la mano non ci arriva. */
+const REACH = 4;
+
+/**
+ * Dove suona l'intervallo sopra una nota del manico, alla stessa altezza esatta (dentro l'ottava):
+ * sulla stessa corda, oppure sulle due corde più acute successive, a portata di mano. Prima i disegni più vicini.
+ */
+export function intervalSpots(root: FretPos, semis: number, maxFret = 15): FretPos[] {
+  const target = soundingMidi(root) + semis;
+  const out: FretPos[] = [];
+  for (const string of STRINGS) {
+    // Corde più gravi, o più di due corde sopra: disegni scomodi, li si lascia fuori.
+    if (string > root.string || root.string - string > 2) continue;
+    const fret = target - soundingMidi({ string, fret: 0 });
+    if (fret < 0 || fret > maxFret) continue;
+    if (string !== root.string && Math.abs(fret - root.fret) > REACH) continue;
+    out.push({ string, fret });
+  }
+  // Prima la corda successiva, poi le altre in ordine di distanza; la stessa corda per ultima.
+  const rank = (p: FretPos) => (p.string === root.string ? 10 : root.string - p.string);
+  return out.sort((a, b) => rank(a) - rank(b));
 }

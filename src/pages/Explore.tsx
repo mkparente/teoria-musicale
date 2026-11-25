@@ -5,6 +5,7 @@ import { Staff } from '../components/Staff';
 import { ScaleExplain } from '../exercises/ScaleQuiz';
 import { DiatonicTable } from '../exercises/TriadQuiz';
 import { ExploreChords } from './ExploreChords';
+import { ExploreIntervals } from './ExploreIntervals';
 import { useSettings, useStored } from '../store';
 import { type FretPos, positionsOf, soundingMidi } from '../theory/guitar';
 import { pentatonicBox } from '../theory/positions';
@@ -166,21 +167,25 @@ function ExploreScales() {
   );
 }
 
-/** Pagina "Esplora": scale oppure accordi. */
+/** Pagina "Esplora": scale, accordi oppure intervalli. */
 export function Explore() {
-  const [tab, setTab] = useStored<'scales' | 'chords'>('explore.tab', 'scales');
+  const [tab, setTab] = useStored<'scales' | 'chords' | 'intervals'>('explore.tab', 'scales');
+  const tabs = [
+    { key: 'scales' as const, label: 'Scale' },
+    { key: 'chords' as const, label: 'Accordi' },
+    { key: 'intervals' as const, label: 'Intervalli' },
+  ];
   return (
     <div class="page">
-      <PageHead title="Esplora" sub="Scale e accordi sul pentagramma e sul manico" />
+      <PageHead title="Esplora" sub="Scale, accordi e intervalli sul pentagramma e sul manico" />
       <div class="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === 'scales'} class={tab === 'scales' ? 'on' : ''} onClick={() => setTab('scales')}>
-          Scale
-        </button>
-        <button role="tab" aria-selected={tab === 'chords'} class={tab === 'chords' ? 'on' : ''} onClick={() => setTab('chords')}>
-          Accordi
-        </button>
+        {tabs.map((t) => (
+          <button key={t.key} role="tab" aria-selected={tab === t.key} class={tab === t.key ? 'on' : ''} onClick={() => setTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
       </div>
-      {tab === 'scales' ? <ExploreScales /> : <ExploreChords />}
+      {tab === 'scales' ? <ExploreScales /> : tab === 'chords' ? <ExploreChords /> : <ExploreIntervals />}
     </div>
   );
 }

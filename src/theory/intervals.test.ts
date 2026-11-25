@@ -12,6 +12,7 @@ import {
   shapeOffset,
   shapeUsable,
   shapeWords,
+  intervalSpots,
 } from './intervals';
 import { type Note, type PitchClass, noteName, stackUp } from './notes';
 import { soundingMidi } from './guitar';
@@ -108,5 +109,38 @@ describe('intervalli sul manico', () => {
       const kind = lo === hi ? 'same' : hi === 5 ? 'next' : 'skip';
       expect(shapeUsable(s, kind), k).toBe(true);
     }
+  });
+});
+
+describe('mappa degli intervalli', () => {
+  const la = { string: 6, fret: 5 } as const; // La sulla 6ª corda
+  const spots = (semis: number, root: { string: 1 | 2 | 3 | 4 | 5 | 6; fret: number } = la) =>
+    intervalSpots(root, semis).map((p) => `${p.string}/${p.fret}`);
+
+  it('dal La della 6ª corda: i punti fissi e gli intervalli del blues', () => {
+    expect(spots(5)).toEqual(['5/5', '6/10']); // 4ª: stesso tasto sulla corda dopo
+    expect(spots(12)).toEqual(['4/7']); // 8ª: due corde sopra, due tasti avanti (il 12° tasto della 5ª è troppo lontano)
+    expect(spots(3)).toEqual(['5/3', '6/8']); // 3ª minore: due tasti prima della 4ª
+    expect(spots(4)).toEqual(['5/4', '6/9']);
+    expect(spots(7)).toEqual(['5/7', '4/2', '6/12']);
+    expect(spots(10)).toEqual(['4/5', '6/15']); // 7ª minore: due corde sopra, stesso tasto
+  });
+
+  it('attraversando la corda Si il disegno si sposta di un tasto', () => {
+    // La sulla 3ª corda (2° tasto): la 4ª sulla 2ª corda è al 3° tasto, non al 2°.
+    expect(intervalSpots({ string: 3, fret: 2 }, 5)[0]).toEqual({ string: 2, fret: 3 });
+  });
+
+  it('mai note sulle corde più gravi, oltre due corde sopra o fuori dal manico', () => {
+    const r = intervalSpots({ string: 1, fret: 12 }, 7);
+    expect(r).toEqual([{ string: 1, fret: 19 }].filter((p) => p.fret <= 15));
+    for (let s = 1; s <= 6; s++)
+      for (let f = 0; f <= 12; f++)
+        for (let semis = 1; semis <= 12; semis++)
+          for (const p of intervalSpots({ string: s as 1, fret: f }, semis)) {
+            expect(p.string).toBeLessThanOrEqual(s);
+            expect(s - p.string).toBeLessThanOrEqual(2);
+            expect(soundingMidi(p) - soundingMidi({ string: s as 1, fret: f })).toBe(semis);
+          }
   });
 });
