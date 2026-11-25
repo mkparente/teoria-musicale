@@ -1,4 +1,6 @@
 import { useState } from 'preact/hooks';
+import { useHeardNotes } from '../audio/mic';
+import { MicPanel, heardToPc } from '../components/MicPanel';
 import { type FretMark, Fretboard } from '../components/Fretboard';
 import { Choices, NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
@@ -279,6 +281,15 @@ function BuildView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { k
     color: i === 0 ? undefined : picked && samePitchClass(picked, answer) ? 'var(--ok)' : 'var(--bad)',
   }));
   const wrongIv = picked && !samePitchClass(picked, answer) ? intervalBetween(q.root, picked) : null;
+  const answerWith = (pc: PitchClass) => {
+    setPicked(pc);
+    finish(samePitchClass(pc, answer));
+  };
+  // Suonando, la fondamentale si può far sentire prima: non conta come risposta.
+  useHeardNotes((midi) => {
+    if (enharmonic(heardToPc(midi), q.root) && q.iv !== 'P8') return;
+    answerWith(heardToPc(midi, answer));
+  }, !outcome);
 
   return (
     <div class="question">
@@ -286,14 +297,8 @@ function BuildView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { k
         Scrivi la <b>{intervalName(q.iv)}</b> sopra <b>{noteName(q.root, naming)}</b>.
       </p>
       <Staff notes={staffNotes} zoom={1.8} maxWidth={300} />
-      <NotePicker
-        marks={marks}
-        disabled={!!outcome}
-        onPick={(pc) => {
-          setPicked(pc);
-          finish(samePitchClass(pc, answer));
-        }}
-      />
+      <NotePicker marks={marks} disabled={!!outcome} onPick={answerWith} />
+      <MicPanel hint="la fondamentale, poi la nota sopra" prefer={[q.root, answer]} />
       <Feedback outcome={outcome} onNext={next}>
         <p>
           {intervalName(q.iv)} sopra {noteName(q.root, naming)}: <b>{noteName(answer, naming)}</b>. Lettere {letterSpan(q.root, n, naming)}, poi{' '}

@@ -20,12 +20,54 @@ export function load<T>(key: string, fallback: T): T {
   }
 }
 
+// ── Date di modifica, per la sincronizzazione ──
+
+/** Chiavi che restano su questo dispositivo: non vanno nel backup né online. */
+export const LOCAL_ONLY = new Set(['sync', '_updated']);
+const UPDATED = '_updated';
+
+/** Quando è stata modificata l'ultima volta ogni chiave (ms). */
+export function updatedTimes(): Record<string, number> {
+  return load<Record<string, number>>(UPDATED, {});
+}
+
+function setUpdated(key: string, time: number) {
+  try {
+    localStorage.setItem(PREFIX + UPDATED, JSON.stringify({ ...updatedTimes(), [key]: time }));
+  } catch {
+    // come sopra
+  }
+}
+
+const changeListeners = new Set<(key: string) => void>();
+
+/** Avvisa a ogni modifica dei dati dell'app (escluse le chiavi locali). */
+export function onDataChange(fn: (key: string) => void): () => void {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+}
+
 export function save<T>(key: string, value: T) {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch {
     // Spazio pieno o archiviazione bloccata: l'app continua a funzionare senza salvare.
   }
+  if (!LOCAL_ONLY.has(key)) {
+    setUpdated(key, Date.now());
+    changeListeners.forEach((fn) => fn(key));
+  }
+  listeners.get(key)?.forEach((fn) => fn());
+}
+
+/** Scrive un valore arrivato da un altro dispositivo, con la sua data di modifica. */
+export function saveFromRemote(key: string, value: unknown, time: number) {
+  try {
+    localStorage.setItem(PREFIX + key, JSON.stringify(value));
+  } catch {
+    return;
+  }
+  setUpdated(key, time);
   listeners.get(key)?.forEach((fn) => fn());
 }
 
@@ -63,11 +105,11 @@ export function exportAll(): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i)!;
-    if (k.startsWith(PREFIX)) out[k.slice(PREFIX.length)] = JSON.parse(localStorage.getItem(k)!);
+    if (k.startsWith(PREFIX) && !LOCAL_ONLY.has(k.slice(PREFIX.length))) out[k.slice(PREFIX.length)] = JSON.parse(localStorage.getItem(k)!);
   }
   return out;
 }
 
 export function importAll(data: Record<string, unknown>) {
-  for (const [k, v] of Object.entries(data)) save(k, v);
+  for (const [k, v] of Object.entries(data)) if (!LOCAL_ONLY.has(k)) save(k, v);
 }

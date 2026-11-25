@@ -12,6 +12,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { Stats } from './pages/Stats';
 import { Today } from './pages/Today';
 import { requestPersistence } from './store';
+import { startAutoSync } from './sync/sync';
 import './styles.css';
 
 /** Le sezioni principali, raggiungibili dalla barra di navigazione. */
@@ -66,4 +67,5 @@ function App() {
 
 registerSW({ immediate: true });
 requestPersistence();
+startAutoSync();
 render(<App />, document.getElementById('app')!);

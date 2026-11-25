@@ -3,6 +3,7 @@ import { Radio } from '../components/Shell';
 import { useProgram } from '../program/progress';
 import { reloadDb } from '../srs/srs';
 import { exportAll, importAll, useSettings } from '../store';
+import { OnlineSync } from './OnlineSync';
 
 export function SettingsPage() {
   const [settings, setSettings] = useSettings();
@@ -72,11 +73,11 @@ export function SettingsPage() {
           onChange={(v) => setSettings({ ...settings, autoAdvance: v === 'auto' })}
         />
       </section>
+      <OnlineSync />
       <section class="panel">
         <h2 class="panel-title">Backup</h2>
         <p class="hint">
-          I progressi restano salvati in questo browser. Per portarli su un altro dispositivo, salva un backup e
-          caricalo dall'altra parte.
+          Una copia dei progressi in un file, da tenere da parte o da caricare su un altro dispositivo.
         </p>
         <div class="row">
           <button class="secondary" onClick={download}>

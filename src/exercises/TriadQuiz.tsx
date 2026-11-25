@@ -1,4 +1,6 @@
 import { useState } from 'preact/hooks';
+import { useHeardNotes } from '../audio/mic';
+import { MicPanel, heardToPc } from '../components/MicPanel';
 import { Choices, NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
 import { Staff } from '../components/Staff';
@@ -17,7 +19,7 @@ import {
   plainTriad,
   romanFor,
 } from '../theory/chords';
-import { type Naming, type PitchClass, noteName, parsePcKey, pcKey, samePitchClass, stackUp } from '../theory/notes';
+import { type Naming, type PitchClass, enharmonic, noteName, parsePcKey, pcKey, samePitchClass, stackUp } from '../theory/notes';
 import { type ScaleType, ROMAN, SCALES, keySignature, scaleName, tonicsFor } from '../theory/scales';
 import { type ExerciseProps, type Outcome, useExercise, useExerciseConfig } from './useExercise';
 
@@ -263,6 +265,12 @@ function WriteTriad({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { 
     if (nextEntered.length === 2) finish(nextEntered.every((e) => e.ok));
   };
 
+  // Suonando l'arpeggio, le note già scritte (la fondamentale per prima) non contano come risposta.
+  useHeardNotes((midi) => {
+    if ([q.root, ...entered.map((e) => e.pc)].some((p) => enharmonic(p, heardToPc(midi)))) return;
+    pick(heardToPc(midi, triad[entered.length + 1]));
+  }, !outcome);
+
   const pcs = [q.root, ...entered.map((e) => e.pc)];
   const staffNotes = stackUp(pcs).map((note, i) => ({
     note,
@@ -283,6 +291,7 @@ function WriteTriad({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { 
             : `Fondamentale ${noteName(q.root, naming)}. Ora la ${role[entered.length]}.`}
       </p>
       <NotePicker onPick={pick} disabled={!!outcome} />
+      <MicPanel hint="fondamentale, terza e quinta" prefer={triad} />
       <Feedback outcome={outcome} onNext={next}>
         <p>
           {chordName(q.root, q.q, naming)}: <b>{joinNames(triad, naming)}</b>.

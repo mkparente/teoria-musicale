@@ -23,7 +23,13 @@ App personale (PWA) per studiare teoria musicale con la chitarra, in vista delle
 - **Esplora**: scale e accordi sul pentagramma e sul manico. Mostra i box delle pentatoniche e le forme CAGED, con fondamentale, terza e quinta colorate.
 - **Progressi**: avanzamento nel programma e, per ogni esercizio, dove sbagli di più.
 
-Ogni risposta alimenta un ripasso a scatole (Leitner, `src/srs/srs.ts`): quello che sbagli torna presto, quello che sai torna sempre più di rado. Le attività con la chitarra hanno tre voti (bene, così così, da rifare). I progressi restano nel browser (localStorage); dalle impostazioni si può salvare e ricaricare un backup.
+- **Rispondere suonando**: dove la risposta è una nota o una sequenza di note (nota su una corda, costruire un intervallo, scrivere una triade o una scala) c'è il pulsante "Rispondi suonando". Il microfono riconosce una nota alla volta: la triade si suona arpeggiata, la scala salendo dalla tonica. Conta il nome della nota, non l'ottava; le note già scritte (per esempio la fondamentale suonata per prima) non contano come risposta. Il microfono resta acceso tra una domanda e l'altra e si spegne lasciando l'app. Il riconoscimento (`src/audio/pitch.ts`) usa il metodo di McLeod e si prova con segnali sintetici.
+
+Ogni risposta alimenta un ripasso a scatole (Leitner, `src/srs/srs.ts`): quello che sbagli torna presto, quello che sai torna sempre più di rado. Le attività con la chitarra hanno tre voti (bene, così così, da rifare).
+
+I progressi stanno nel browser (localStorage). Dalle impostazioni si può:
+- **salvarli online** in un Gist segreto del proprio account GitHub, per usare l'app da più dispositivi. Serve un token classico con il solo permesso `gist`, da incollare su ogni dispositivo (resta solo lì, non va online né nel backup). La sincronizzazione parte all'apertura, poco dopo ogni modifica e quando si torna all'app: scarica, unisce e ricarica. Il ripasso si unisce elemento per elemento (vince la risposta più recente), il registro delle sessioni giorno per giorno, il resto tiene la versione modificata più di recente (`src/sync/`);
+- salvare e ricaricare un backup in un file.
 
 ## Sviluppo
 

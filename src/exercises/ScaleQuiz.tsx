@@ -1,4 +1,6 @@
 import { useState } from 'preact/hooks';
+import { useHeardNotes } from '../audio/mic';
+import { MicPanel, heardToPc } from '../components/MicPanel';
 import { Choices, NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
 import { Staff } from '../components/Staff';
@@ -374,6 +376,12 @@ function WriteScale({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { 
     if (nextEntered.length === right.length - 1) finish(nextEntered.every((e) => e.ok));
   };
 
+  // Suonando la scala dalla tonica, le note già scritte (tonica e ottava comprese) non contano come risposta.
+  useHeardNotes((midi) => {
+    if ([q.tonic, ...entered.map((e) => e.pc)].some((p) => enharmonic(p, heardToPc(midi)))) return;
+    pick(heardToPc(midi, right[entered.length + 1]));
+  }, !outcome);
+
   const shown = [
     { note: octaveNotes[0], label: noteName(q.tonic, naming) },
     ...entered.map((e, i) => ({
@@ -398,6 +406,7 @@ function WriteScale({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { 
             : `Nota ${entered.length + 2} di ${right.length}`}
       </p>
       <NotePicker onPick={pick} disabled={!!outcome} />
+      <MicPanel hint="la scala, salendo dalla tonica" prefer={right} />
       <Feedback outcome={outcome} onNext={next}>
         <ScaleExplain tonic={q.tonic} type={q.type} />
         <p class="tip">{stepsTip(q.type)}</p>

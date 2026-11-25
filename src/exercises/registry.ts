@@ -11,7 +11,7 @@ import type { ExerciseProps } from './useExercise';
 
 export type IconName =
   | 'today' | 'program' | 'exercises' | 'explore' | 'progress' | 'settings'
-  | 'scale' | 'interval' | 'triad' | 'reading' | 'fretboard' | 'chords' | 'guitar' | 'review' | 'new' | 'back' | 'close' | 'sliders';
+  | 'scale' | 'interval' | 'triad' | 'reading' | 'fretboard' | 'chords' | 'guitar' | 'review' | 'new' | 'back' | 'close' | 'sliders' | 'mic';
 
 export interface ExerciseDef {
   key: ExerciseKey;

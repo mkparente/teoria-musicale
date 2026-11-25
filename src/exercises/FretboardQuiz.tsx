@@ -1,10 +1,12 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
+import { useHeardNotes } from '../audio/mic';
+import { MicPanel } from '../components/MicPanel';
 import { type FretMark, Fretboard } from '../components/Fretboard';
 import { NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
 import { useSettings } from '../store';
 import { tiered } from '../srs/srs';
-import { type FretPos, type GuitarString, STRINGS, STRING_NAMES, positionsOf, samePos, semitoneAt } from '../theory/guitar';
+import { type FretPos, type GuitarString, STRINGS, STRING_NAMES, positionsOf, samePos, semitoneAt, soundingMidi } from '../theory/guitar';
 import { type Naming, type PitchClass, commonSpellings, noteName, pitchClass } from '../theory/notes';
 import { type ExerciseProps, type Outcome, useExercise, useExerciseConfig } from './useExercise';
 
@@ -146,6 +148,9 @@ function QuestionView({ q, config, outcome, finish, next }: ViewProps) {
   const [marks, setMarks] = useState<FretMark[]>([]);
   const [pickMarks, setPickMarks] = useState<PickMark[]>([]);
   const label = (pos: FretPos) => semiName(semitoneAt(pos), naming).split(' / ')[0];
+  // Risposta suonata: la gestisce la domanda che la prevede (oggi solo "nota su una corda").
+  const onHeard = useRef<((midi: number) => void) | null>(null);
+  useHeardNotes((midi) => onHeard.current?.(midi), !outcome && q.kind === 'str');
 
   if (q.kind === 'name') {
     const semi = semitoneAt(q.pos);
@@ -186,12 +191,22 @@ function QuestionView({ q, config, outcome, finish, next }: ViewProps) {
       ]);
       finish(ok);
     };
+    // Suonata sulla chitarra: si suppone che sia sulla corda chiesta, così si sa il tasto.
+    onHeard.current = (midi) => {
+      const fret = midi - soundingMidi({ string: q.string, fret: 0 });
+      if (fret >= 0 && fret <= config.maxFret) return tap({ string: q.string, fret });
+      // Fuori dai tasti mostrati (un'altra ottava o un'altra corda): conta il nome della nota.
+      const ok = midi % 12 === q.semitone;
+      setMarks(targets.map((t) => ({ pos: t, kind: ok ? ('ok' as const) : ('hint' as const), label: label(t) })));
+      finish(ok);
+    };
     return (
       <div class="question">
         <p class="prompt">
           Dov'è <b>{noteName(q.spelling, naming)}</b> sulla <b>{STRING_NAMES[q.string]}</b>?
         </p>
         <Fretboard maxFret={config.maxFret} activeStrings={config.strings} focusString={q.string} marks={marks} onTap={tap} />
+        <MicPanel hint="suona la nota su quella corda" prefer={[q.spelling]} />
         <Feedback outcome={outcome} onNext={next}>
           <p>
             {noteName(q.spelling, naming)} sulla {STRING_NAMES[q.string]}:{' '}

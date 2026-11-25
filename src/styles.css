@@ -1172,3 +1172,91 @@ a.secondary {
   background: none;
   border: 2px dashed var(--line);
 }
+
+/* Salvataggio online */
+.steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.steps a {
+  color: var(--accent);
+}
+.sync-form {
+  display: flex;
+  gap: 8px;
+}
+.sync-form input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.sync-error {
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+.row .link-btn.danger {
+  margin-top: 0;
+}
+
+/* Microfono */
+.mic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.mic-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.mic.on {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.mic-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bad);
+  animation: mic-pulse 1.4s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.mic-text {
+  font-size: 0.92rem;
+}
+.mic-level {
+  width: 56px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.mic-level i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform 0.1s linear;
+}
+.mic .link-btn {
+  padding: 2px 4px;
+}
