@@ -73,9 +73,19 @@ export function Feedback({ outcome, onNext, children }: FeedbackProps) {
   return (
     <div class={`feedback ${outcome.correct ? 'fb-good' : 'fb-wrong'}`}>
       <div class="fb-title">
-        {outcome.correct ? '✓ Giusto' : '✗ Sbagliato'}
+        <span>
+          {outcome.correct ? '✓ Giusto' : '✗ Sbagliato'}
+          {outcome.slow && <span class="fb-slow"> · ma lento</span>}
+        </span>
         <span class="fb-time">{(outcome.ms / 1000).toFixed(1).replace('.', ',')} s</span>
       </div>
+      {outcome.slow && outcome.targetMs && (
+        <p class="fb-slow-note">
+          {outcome.held
+            ? `Oltre i ${Math.round(outcome.targetMs / 1000)} s la risposta conta come giusta ma non ancora sicura: resta dov'è e torna presto. Salirà quando arriverà più in fretta.`
+            : `Oltre i ${Math.round(outcome.targetMs / 1000)} s: per ora va bene, ma dalle prossime volte per consolidarla servirà rispondere più in fretta.`}
+        </p>
+      )}
       {children && <div class="fb-body">{children}</div>}
       <button class="primary" onClick={onNext} autofocus>
         Avanti

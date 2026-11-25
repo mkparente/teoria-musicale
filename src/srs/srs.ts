@@ -1,4 +1,5 @@
 import { load, save } from '../store';
+import { SPEED_FROM_BOX } from './speed';
 
 // Ripasso a scatole (metodo Leitner). Ogni elemento sale di scatola quando lo indovini
 // e torna alla prima quando lo sbagli; più alta è la scatola, più tardi torna.
@@ -10,6 +11,9 @@ export interface ItemState {
   correct: number;
   totalMs: number;
   last: number;
+  /** Risposte giuste misurate col tempo (da quando esiste la soglia) e, tra queste, quelle rapide. */
+  timed?: number;
+  fast?: number;
 }
 
 export type Db = Record<string, ItemState>;
@@ -35,15 +39,23 @@ let db: Db = load<Db>(KEY, {});
 export const getDb = () => db;
 export const getItem = (id: string): ItemState | undefined => db[id];
 
-export function record(id: string, correct: boolean, ms: number) {
-  recordGrade(id, correct ? 'good' : 'again', ms);
+/**
+ * Esito di una risposta a un quiz. Giusta e rapida: sale di scatola. Giusta ma lenta: conta
+ * come giusta, ma da SPEED_FROM_BOX in su resta nella sua scatola e torna presto (come "così così").
+ * Restituisce il voto applicato.
+ */
+export function record(id: string, correct: boolean, ms: number, slow = false): 'good' | 'hard' | 'again' {
+  const box = db[id]?.box ?? 0;
+  const grade = !correct ? 'again' : slow && box >= SPEED_FROM_BOX ? 'hard' : 'good';
+  recordGrade(id, grade, ms, correct ? { fast: !slow } : undefined);
+  return grade;
 }
 
 /**
  * Voto a tre livelli, per le attività che valuti da solo:
  * good = sale di scatola, hard = resta dov'è e torna presto, again = si ricomincia.
  */
-export function recordGrade(id: string, grade: 'good' | 'hard' | 'again', ms: number) {
+export function recordGrade(id: string, grade: 'good' | 'hard' | 'again', ms: number, timing?: { fast: boolean }) {
   const now = Date.now();
   const prev = db[id] ?? { box: 0, due: now, seen: 0, correct: 0, totalMs: 0, last: now };
   const correct = grade !== 'again';
@@ -58,6 +70,9 @@ export function recordGrade(id: string, grade: 'good' | 'hard' | 'again', ms: nu
       correct: prev.correct + (correct ? 1 : 0),
       totalMs: prev.totalMs + Math.min(ms, 60 * SEC),
       last: now,
+      ...(timing || prev.timed
+        ? { timed: (prev.timed ?? 0) + (timing ? 1 : 0), fast: (prev.fast ?? 0) + (timing?.fast ? 1 : 0) }
+        : {}),
     },
   };
   save(KEY, db);

@@ -1305,3 +1305,13 @@ a.secondary {
 .iv-row .hint {
   margin-top: 4px;
 }
+
+/* Risposta giusta ma lenta */
+.fb-slow {
+  color: var(--gold);
+}
+.fb-slow-note {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--fg);
+}

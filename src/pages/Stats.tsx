@@ -3,6 +3,7 @@ import { PageHead } from '../components/Layout';
 import { EXERCISE_LIST, GUITAR_PREFIX } from '../exercises/registry';
 import { UNITS } from '../program/curriculum';
 import { UNIT_THRESHOLD, unitProgress, useProgram } from '../program/progress';
+import { targetMs } from '../srs/speed';
 import { MASTERED_BOX, getDb, resetPrefix } from '../srs/srs';
 import { type Naming } from '../theory/notes';
 import { load, useSettings } from '../store';
@@ -52,6 +53,13 @@ export function Stats() {
         const time = items.reduce((s, [, v]) => s + v.totalMs, 0);
         const mastered = items.filter(([, v]) => v.box >= MASTERED_BOX).length;
         const due = items.filter(([, v]) => v.due <= now).length;
+        // Giuste e rapide: solo le risposte misurate da quando esiste la soglia di tempo.
+        const timed = items.reduce((s, [, v]) => s + (v.timed ?? 0), 0);
+        const fast = items.reduce((s, [, v]) => s + (v.fast ?? 0), 0);
+        const slowOnes = items
+          .filter(([, v]) => (v.timed ?? 0) >= 2 && (v.fast ?? 0) < (v.timed ?? 0))
+          .sort(([, a], [, b]) => (a.fast ?? 0) / a.timed! - (b.fast ?? 0) / b.timed! || b.totalMs / b.seen - a.totalMs / a.seen)
+          .slice(0, 6);
         const weak = items
           .filter(([, v]) => v.seen >= 2 && v.correct < v.seen)
           .sort(([, a], [, b]) => a.correct / a.seen - b.correct / b.seen || a.box - b.box)
@@ -67,7 +75,25 @@ export function Stats() {
               {g.prefix !== GUITAR_PREFIX && (
                 <Stat n={`${(time / attempts / 1000).toFixed(1).replace('.', ',')} s`} label="tempo medio" />
               )}
+              {g.prefix !== GUITAR_PREFIX && (
+                <Stat n={timed ? `${Math.round((100 * fast) / timed)}%` : '–'} label="delle giuste, rapide" />
+              )}
             </div>
+            {slowOnes.length > 0 && (
+              <>
+                <h3 class="sub">Giuste ma lente</h3>
+                <ul class="weak">
+                  {slowOnes.map(([id, v]) => (
+                    <li key={id}>
+                      <span>{g.describe(id, naming)}</span>
+                      <span class="weak-score" title={`Soglia ${Math.round((targetMs(id) ?? 0) / 1000)} s`}>
+                        {v.fast ?? 0}/{v.timed} rapide
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
             {weak.length > 0 && (
               <>
                 <h3 class="sub">Dove sbagli di più</h3>

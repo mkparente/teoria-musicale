@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { micState } from '../audio/mic';
+import { effectiveTarget } from '../srs/speed';
 import { pickNextInfo, record } from '../srs/srs';
 import { useSettings, useStored } from '../store';
 
 export interface Outcome {
   correct: boolean;
   ms: number;
+  /** Giusta ma oltre la soglia di tempo (targetMs). */
+  slow?: boolean;
+  targetMs?: number;
+  /** La lentezza ha pesato: l'elemento non è salito di scatola e torna presto. */
+  held?: boolean;
 }
 
 export interface Session {
@@ -110,14 +117,17 @@ export function useExercise<Q>(
   const finish = (correct: boolean) => {
     if (!current || outcome) return;
     const ms = performance.now() - current.start;
-    record(current.id, correct, ms);
-    setOutcome({ correct, ms });
+    const target = effectiveTarget(current.id, micState() === 'on');
+    const slow = correct && target !== null && ms > target;
+    const grade = record(current.id, correct, ms, slow);
+    setOutcome({ correct, ms, slow, targetMs: target ?? undefined, held: slow && grade === 'hard' });
     pausedSince.current = Date.now();
     onPause.current?.(true);
     const s = sessionRef.current;
     sessionRef.current = { done: s.done + 1, correct: s.correct + (correct ? 1 : 0), streak: correct ? s.streak + 1 : 0 };
     setSession(sessionRef.current);
-    if (correct && settings.autoAdvance) timer.current = window.setTimeout(next, 1100);
+    // Giusta ma lenta: si resta sulla correzione, così si legge perché torna presto.
+    if (correct && !slow && settings.autoAdvance) timer.current = window.setTimeout(next, 1100);
   };
 
   return { pool, current, outcome, session, error, next, finish, embedded: !!run.onEnd };
