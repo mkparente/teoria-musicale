@@ -117,7 +117,8 @@ export function ExploreIntervals() {
         <p class="hint">
           Due punti fissi: sulla corda successiva, lo <b>stesso tasto</b> è la <b>4ª</b>; due corde sopra e{' '}
           <b>due tasti avanti</b> c'è l'<b>8ª</b>. Gli altri intervalli si contano da lì: la 3ª minore è due tasti prima
-          della 4ª, la 5ª due tasti dopo, la 7ª minore due tasti prima dell'8ª.
+          della 4ª, la 5ª due tasti dopo, la 7ª minore due tasti prima dell'8ª. Quando si attraversa la corda Si (dalla 3ª
+          alla 2ª) 4ª e 8ª sono un tasto più avanti: i pallini tratteggiati ne tengono conto.
         </p>
         {spots.map(({ k, positions }) => {
           const s = semitones(k);

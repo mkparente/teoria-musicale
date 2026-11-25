@@ -19,6 +19,12 @@ import {
   intervalName,
   intervalShort,
   mainShape,
+  articleOf,
+  indefiniteOf,
+  referenceKey,
+  referenceWords,
+  withArticle,
+  withIndefinite,
   noteAbove,
   plainAbove,
   semitoneWords,
@@ -146,7 +152,7 @@ const SHAPE_WORDS: Record<ShapeKind, string> = {
 export function describe(id: string, naming: Naming): string {
   const [kind, a, b] = id.slice(PREFIX.length).split(':');
   if (kind === 'fret') return `${choiceName(a as Choice)} sul manico, ${SHAPE_WORDS[b as ShapeKind]}`;
-  if (kind === 'find') return `trovare la ${choiceName(a as Choice)} ${SHAPE_WORDS[b as ShapeKind]}`;
+  if (kind === 'find') return `trovare ${withArticle(choiceName(a as Choice))} ${SHAPE_WORDS[b as ShapeKind]}`;
   const key = a as IntervalKey;
   const root = parsePcKey(b);
   if (kind === 'name') return `riconoscere ${noteName(root, naming)} – ${noteName(noteAbove(root, key), naming)}`;
@@ -165,14 +171,18 @@ const BLUES: Partial<Record<IntervalKey, string>> = {
   d5: 'Il tritono: la ♭5, la blue note della scala blues.',
   M6: 'È la 6 del riff boogie (2-2-4-4).',
   M7: 'Un semitono sotto l’ottava.',
-  m2: 'Il semitono: un tasto.',
-  M2: 'Un tono: due tasti.',
 };
 
-/** Correzione breve: semitoni, disegno sul manico, legame con il blues. */
-function tipFor(key: IntervalKey, title = intervalName(key)) {
+/**
+ * Correzione breve: semitoni, disegno sul manico contato dal riferimento (4ª sulla corda dopo,
+ * 8ª due corde sopra), legame con il blues.
+ */
+export function tipFor(key: IntervalKey, title = intervalName(key)) {
   const s = semitones(key);
-  return `${title} = ${semitoneWords(s)}; sulla chitarra, ${shapeWords(s, ...mainShape(s))}. ${BLUES[key] ?? ''}`;
+  const [lo, hi] = mainShape(s);
+  const shape: ShapeKind = lo === hi ? 'same' : lo - hi === 1 ? 'next' : 'skip';
+  const guitar = referenceWords(s, title[0].toLowerCase() + title.slice(1), shape) ?? `${s === 1 ? 'un tasto' : 'due tasti'} più su sulla stessa corda (${s === 1 ? 'il semitono' : 'un tono'}).`;
+  return `${title} = ${semitoneWords(s)}. Sul manico: ${guitar} ${BLUES[key] ?? ''}`;
 }
 
 /** Le lettere che l'intervallo attraversa: Do-Re-Mi = 3ª. */
@@ -304,7 +314,8 @@ function BuildView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { k
   return (
     <div class="question">
       <p class="prompt">
-        Scrivi la <b>{intervalName(q.iv)}</b> sopra <b>{noteName(q.root, naming)}</b>.
+        Scrivi {articleOf(intervalName(q.iv))}
+        <b>{intervalName(q.iv)}</b> sopra <b>{noteName(q.root, naming)}</b>.
       </p>
       <Staff notes={staffNotes} zoom={1.8} maxWidth={300} />
       <NotePicker marks={marks} disabled={!!outcome} onPick={answerWith} />
@@ -316,12 +327,12 @@ function BuildView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { k
         </p>
         {picked && wrongIv && enharmonic(picked, answer) && (
           <p>
-            {noteName(picked, naming)} suona uguale, ma {noteName(q.root, naming)} → {noteName(picked, naming)} è una {intervalName(wrongIv)}: conta le lettere.
+            {noteName(picked, naming)} suona uguale, ma {noteName(q.root, naming)} → {noteName(picked, naming)} è {withIndefinite(intervalName(wrongIv))}: conta le lettere.
           </p>
         )}
         {picked && wrongIv && !enharmonic(picked, answer) && (
           <p>
-            {noteName(q.root, naming)} → {noteName(picked, naming)} è una {intervalName(wrongIv)}.
+            {noteName(q.root, naming)} → {noteName(picked, naming)} è {withIndefinite(intervalName(wrongIv))}.
           </p>
         )}
         <p class="tip">{tipFor(q.iv)}</p>
@@ -334,11 +345,22 @@ const capitalize = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 /** Nomi di esempio per le due note sul manico (nel blues la ♭5 si scrive come quinta diminuita). */
 function exampleNames(lower: FretPos, choice: Choice, naming: Naming): string | null {
-  const key: IntervalKey = choice === 'TT' ? 'd5' : choice;
-  for (const root of commonSpellings(semitoneAt(lower))) {
-    if (plainAbove(root, key)) return `${noteName(root, naming)} → ${noteName(noteAbove(root, key), naming)}`;
+  // Il tritono come ♭5 (Fa♯ → Do), ma come 4ª aumentata se così la nota acuta è più semplice (Fa → Si, non Do♭).
+  const keys: IntervalKey[] = choice === 'TT' ? ['d5', 'A4'] : [choice];
+  // Mi♭, La♭ e Si♭ col bemolle, come si chiamano nel blues; le altre alterate col diesis.
+  const semi = semitoneAt(lower);
+  const spellings = commonSpellings(semi).sort((a, b) => ([3, 8, 10].includes(semi) ? a.acc - b.acc : b.acc - a.acc));
+  let best: { text: string; acc: number } | null = null;
+  for (const root of spellings) {
+    for (const key of keys) {
+      if (!plainAbove(root, key)) continue;
+      const upper = noteAbove(root, key);
+      const acc = Math.abs(upper.acc) + Math.abs(root.acc);
+      if (!best || acc < best.acc) best = { text: `${noteName(root, naming)} → ${noteName(upper, naming)}`, acc };
+    }
+    if (best) break;
   }
-  return null;
+  return best?.text ?? null;
 }
 
 function FretView({ q, config, outcome, finish, next }: ViewProps & { q: Extract<Q, { shape: ShapeKind }> }) {
@@ -349,12 +371,17 @@ function FretView({ q, config, outcome, finish, next }: ViewProps & { q: Extract
     .sort((a, b) => choiceSemis(a) - choiceSemis(b))
     .map((c) => ({ value: c, label: choiceLabel(c) }));
   const upperLabel = q.choice === 'TT' ? '♭5' : DEGREE_LABEL[q.choice];
+  const ref = reference(q);
   const marks: FretMark[] = [
     { pos: q.lower, kind: 'root', label: '1' },
+    ...(outcome && ref && !samePos(ref.pos, q.upper) && ref.pos.fret >= 0 && ref.pos.fret <= FRETS
+      ? [{ pos: ref.pos, kind: 'hint' as const, label: DEGREE_LABEL[ref.key] }]
+      : []),
     { pos: q.upper, kind: outcome ? (outcome.correct ? 'ok' : 'bad') : 'note', label: outcome ? upperLabel : '?' },
   ];
   const example = exampleNames(q.lower, q.choice, naming);
   const tipKey: IntervalKey = q.choice === 'TT' ? 'd5' : q.choice;
+  const tip = referenceTip(q);
 
   return (
     <div class="question">
@@ -375,12 +402,10 @@ function FretView({ q, config, outcome, finish, next }: ViewProps & { q: Extract
       />
       <Feedback outcome={outcome} onNext={next}>
         <p>
-          È una <b>{choiceName(q.choice)}</b> ({semitoneWords(semis)}){example && `, per esempio ${example}`}. {capitalize(shapeWords(semis, q.lower.string, q.upper.string))}.
+          È {indefiniteOf(shortName(q.choice))}
+          <b>{shortName(q.choice)}</b> ({semitoneWords(semis)}{q.choice === 'TT' && ': 4ª aumentata o 5ª diminuita'}){example && `, per esempio ${example}`}. {capitalize(shapeWords(semis, q.lower.string, q.upper.string))}.
         </p>
-        {(q.shape === 'nextB' || q.shape === 'skipB') && (
-          <p>Tra la corda Sol e la corda Si ci sono 4 semitoni invece di 5: attraversandole il disegno si sposta di un tasto in avanti.</p>
-        )}
-        <p class="tip">{tipFor(tipKey, q.choice === 'TT' ? 'Tritono' : undefined)}</p>
+        <p class="tip">{tip ? `${tip} ${BLUES[tipKey] ?? ''}` : tipFor(tipKey, q.choice === 'TT' ? 'Tritono' : undefined)}</p>
       </Feedback>
     </div>
   );
@@ -389,29 +414,19 @@ function FretView({ q, config, outcome, finish, next }: ViewProps & { q: Extract
 /** Grado e nome di una distanza in semitoni sopra la fondamentale (dentro l'ottava). */
 const SEMI_DEGREE = ['1', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7', '8'];
 const SEMI_CHOICE: (Choice | null)[] = [null, 'm2', 'M2', 'm3', 'M3', 'P4', 'TT', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'];
-const COUNT = ['', 'un', 'due', 'tre', 'quattro', 'cinque', 'sei', 'sette'];
-const frets = (n: number) => `${COUNT[n] ?? n} ${n === 1 ? 'tasto' : 'tasti'}`;
 const shortName = (c: Choice) => choiceName(c).split(' (')[0];
 
-/** Il punto di riferimento da cui si conta il disegno: la 4ª sulla corda dopo, l'8ª due corde sopra. */
+/** Dove sta il riferimento (4ª o 8ª) sulla corda della risposta. */
 function reference(q: { shape: ShapeKind; lower: FretPos; upper: FretPos }): { key: 'P4' | 'P8'; pos: FretPos } | null {
-  if (q.shape === 'same') return null;
-  const key = q.shape === 'next' || q.shape === 'nextB' ? 'P4' : 'P8';
+  const key = referenceKey(q.shape);
+  if (!key) return null;
   return { key, pos: { string: q.upper.string, fret: q.lower.fret + shapeOffset(semitones(key), q.shape) } };
 }
 
 /** Correzione che ragiona dal riferimento: "la 4ª è allo stesso tasto; la 3ª minore è due tasti prima". */
 export function referenceTip(q: { choice: Choice; shape: ShapeKind; lower: FretPos; upper: FretPos }): string | null {
-  const ref = reference(q);
-  if (!ref) return null;
-  const d = ref.pos.fret - q.lower.fret;
-  const where = d === 0 ? 'allo stesso tasto' : `${frets(Math.abs(d))} ${d > 0 ? 'avanti' : 'indietro'}`;
-  const refName = ref.key === 'P4' ? 'la 4ª è sulla corda dopo' : 'l’8ª è due corde sopra';
-  const from = choiceSemis(q.choice) - semitones(ref.key);
-  const target =
-    from === 0 ? `la ${shortName(q.choice)} è proprio il riferimento` : `la ${shortName(q.choice)} è ${frets(Math.abs(from))} ${from < 0 ? 'prima' : 'dopo'}`;
-  const b = q.shape === 'nextB' || q.shape === 'skipB' ? ' Attraverso la corda Si tutto si sposta di un tasto in avanti.' : '';
-  return `Riferimento: ${refName}, ${where} (la nota tratteggiata); ${target}.${b}`;
+  const words = referenceWords(choiceSemis(q.choice), shortName(q.choice), q.shape, true);
+  return words && `Riferimento: ${words}`;
 }
 
 function FindView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { shape: ShapeKind }> }) {
@@ -439,13 +454,19 @@ function FindView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { sh
   if (wrong && visible(tapped)) marks.push({ pos: tapped, kind: 'bad', label: inOctave ? SEMI_DEGREE[tappedSemis] : '✗' });
   if (outcome) marks.push({ pos: q.upper, kind: 'ok', label: q.choice === 'TT' ? '♭5' : DEGREE_LABEL[q.choice] });
 
-  const found = !inOctave ? null : tappedSemis === 0 ? 'la fondamentale stessa' : `la ${shortName(SEMI_CHOICE[tappedSemis]!)} (${semitoneWords(tappedSemis)})`;
+  const found = !inOctave
+    ? null
+    : tappedSemis === 0
+      ? 'la fondamentale stessa'
+      : `${withArticle(shortName(SEMI_CHOICE[tappedSemis]!))} (${semitoneWords(tappedSemis)})`;
+  const otherString = wrong && tappedSemis === semis && tapped.string !== q.upper.string;
   const tip = referenceTip(q);
 
   return (
     <div class="question">
       <p class="prompt">
-        Tocca la <b>{name}</b> sopra la nota <b>1</b>,{' '}
+        Tocca {articleOf(name)}
+        <b>{name}</b> sopra la nota <b>1</b>,{' '}
         {q.shape === 'same' ? (
           'sulla stessa corda'
         ) : (
@@ -458,7 +479,17 @@ function FindView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { sh
       <Fretboard maxFret={FRETS} marks={marks} focusString={q.upper.string} onTap={answer} />
       <MicPanel hint="suona la nota sulla corda evidenziata" />
       <Feedback outcome={outcome} onNext={next}>
-        {wrong && <p>{found ? `Hai trovato ${found}.` : 'Quella nota è fuori dall’ottava sopra la fondamentale.'}</p>}
+        {wrong && (
+          <p>
+            {otherString
+              ? `È la nota giusta, ma sulla ${tapped.string}ª corda: qui la cercavamo sulla ${q.upper.string === q.lower.string ? 'stessa corda della nota 1' : `${q.upper.string}ª`}.`
+              : found
+                ? `Hai trovato ${found}.`
+                : tappedSemis < 0
+                  ? 'Quella nota è più grave della nota 1: l’intervallo va cercato sopra.'
+                  : 'Quella nota è oltre l’ottava sopra la nota 1.'}
+          </p>
+        )}
         <p>
           {capitalize(name)} ({semitoneWords(semis)}), {shapeWords(semis, q.lower.string, q.upper.string)}.
         </p>

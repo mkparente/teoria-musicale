@@ -17,6 +17,13 @@ interface ItemLike {
 interface DayLike {
   minutes?: number;
   completed?: boolean;
+  /** Minuti per dispositivo: due dispositivi nello stesso giorno si sommano. */
+  parts?: Record<string, number>;
+}
+
+interface PlanLike {
+  date?: string;
+  results?: unknown[];
 }
 
 /** Ripasso: per ogni elemento vince la versione risposta più di recente. */
@@ -31,16 +38,57 @@ function mergeSrs(a: Record<string, ItemLike>, b: Record<string, ItemLike>): Rec
   return out;
 }
 
-/** Registro delle sessioni: per ogni giorno il tempo più lungo, e completata se lo è da una parte. */
+/** Le parti per dispositivo di un giorno; i giorni registrati prima ne hanno una sola. */
+const partsOf = (d: DayLike): Record<string, number> => d.parts ?? (d.minutes ? { prima: d.minutes } : {});
+
+/**
+ * Registro delle sessioni: per ogni giorno i minuti di ogni dispositivo (il valore più alto, se
+ * lo stesso dispositivo compare da tutte e due le parti) sommati; completata se lo è da una parte.
+ */
 function mergeLog(a: Record<string, DayLike>, b: Record<string, DayLike>): Record<string, DayLike> {
   const out: Record<string, DayLike> = { ...a };
   for (const [day, entry] of Object.entries(b)) {
     const mine = out[day];
-    out[day] = mine
-      ? { minutes: Math.max(mine.minutes ?? 0, entry.minutes ?? 0), completed: !!(mine.completed || entry.completed) }
-      : entry;
+    if (!mine) {
+      out[day] = entry;
+      continue;
+    }
+    const parts = { ...partsOf(mine) };
+    for (const [dev, m] of Object.entries(partsOf(entry))) parts[dev] = Math.max(parts[dev] ?? 0, m);
+    const minutes = Object.values(parts).reduce((s, m) => s + m, 0);
+    out[day] = { minutes, completed: !!(mine.completed || entry.completed), parts };
   }
   return out;
+}
+
+/**
+ * Sessione di oggi: vince quella del giorno più recente e, nello stesso giorno, quella più avanti
+ * (più blocchi fatti). Così un dispositivo che ricostruisce il piano all'apertura non cancella
+ * i blocchi già fatti su un altro.
+ */
+function mergePlan(a: PlanLike | null, b: PlanLike | null, aNewer: boolean): PlanLike | null {
+  if (!a || !b) return a ?? b;
+  if ((a.date ?? '') !== (b.date ?? '')) return (a.date ?? '') > (b.date ?? '') ? a : b;
+  const ra = a.results?.length ?? 0;
+  const rb = b.results?.length ?? 0;
+  if (ra !== rb) return ra > rb ? a : b;
+  return aNewer ? a : b;
+}
+
+/** Azzeramenti fatti dalle statistiche: per gruppo (prefisso) la data dell'ultimo. */
+function mergeResets(a: unknown, b: unknown): Record<string, number> {
+  const out: Record<string, number> = { ...(isRecord(a) ? (a as Record<string, number>) : {}) };
+  if (isRecord(b)) for (const [p, t] of Object.entries(b as Record<string, number>)) out[p] = Math.max(out[p] ?? 0, t);
+  return out;
+}
+
+/** Toglie dal ripasso gli elementi azzerati dopo l'ultima risposta. */
+function applyResets(srs: Record<string, ItemLike>, resets: Record<string, number>): Record<string, ItemLike> {
+  const entries = Object.entries(resets);
+  if (!entries.length) return srs;
+  return Object.fromEntries(
+    Object.entries(srs).filter(([id, item]) => !entries.some(([p, t]) => id.startsWith(p) && (item.last ?? 0) <= t)),
+  );
 }
 
 const isRecord = (v: unknown): v is Record<string, never> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -63,7 +111,13 @@ export function mergeSnapshots(local: Snapshot, remote: Snapshot): Snapshot {
     else if (!inLocal) out.data[key] = remote.data[key];
     else if (key === 'srs' && isRecord(local.data[key]) && isRecord(remote.data[key])) out.data[key] = mergeSrs(local.data[key], remote.data[key]);
     else if (key === 'log' && isRecord(local.data[key]) && isRecord(remote.data[key])) out.data[key] = mergeLog(local.data[key], remote.data[key]);
+    else if (key === 'srsResets') out.data[key] = mergeResets(local.data[key], remote.data[key]);
+    else if (key === 'plan') out.data[key] = mergePlan(local.data[key] as PlanLike | null, remote.data[key] as PlanLike | null, tl > tr);
     else out.data[key] = tl > tr ? local.data[key] : remote.data[key];
+  }
+  // Un gruppo azzerato su un dispositivo non deve tornare dalla copia dell'altro.
+  if (isRecord(out.data.srs) && isRecord(out.data.srsResets)) {
+    out.data.srs = applyResets(out.data.srs, out.data.srsResets as Record<string, number>);
   }
   return out;
 }

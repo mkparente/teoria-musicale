@@ -23,6 +23,8 @@ let analyser: AnalyserNode | null = null;
 let timer: number | undefined;
 let idleTimer: number | undefined;
 let tracker = new NoteTracker();
+/** Cresce a ogni accensione e spegnimento: un avvio rimasto indietro (permesso ancora da dare) si annulla da solo. */
+let generation = 0;
 const listeners = new Set<Listener>();
 const stateListeners = new Set<() => void>();
 
@@ -37,15 +39,23 @@ export const micState = () => state;
 export async function startMic() {
   if (state === 'on' || state === 'starting' || state === 'unsupported') return;
   setState('starting');
+  const mine = ++generation;
   try {
     // Senza filtri: cancellazione dell'eco e riduzione del rumore rovinano le note tenute.
-    stream = await navigator.mediaDevices.getUserMedia({
+    const s = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
     });
+    if (mine !== generation) {
+      s.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    stream = s;
     ctx = new AudioContext();
     if (ctx.state === 'suspended') await ctx.resume();
+    if (mine !== generation) return void stopMic();
     analyser = ctx.createAnalyser();
-    analyser.fftSize = 2048;
+    // Servono almeno due periodi del Mi basso (82 Hz): a 96 kHz il blocco va raddoppiato.
+    analyser.fftSize = ctx.sampleRate > 50000 ? 4096 : 2048;
     ctx.createMediaStreamSource(stream).connect(analyser);
     // Tornando all'app dopo averla lasciata, il browser può sospendere l'audio: serve un nuovo tocco.
     ctx.addEventListener('statechange', () => {
@@ -74,6 +84,7 @@ export async function startMic() {
 }
 
 export function stopMic() {
+  generation++;
   clearInterval(timer);
   clearTimeout(idleTimer);
   stream?.getTracks().forEach((t) => t.stop());

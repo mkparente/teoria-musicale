@@ -129,6 +129,18 @@ export function scheduleDelta(state: ProgramState, now = new Date()): number {
 export interface DayLog {
   minutes: number;
   completed: boolean;
+  /** Minuti per dispositivo, per sommarli quando si sincronizza. */
+  parts?: Record<string, number>;
+}
+
+/** Identificativo di questo dispositivo (resta qui, non va online). */
+function deviceId(): string {
+  let id = load<string>('device', '');
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 10);
+    save('device', id);
+  }
+  return id;
 }
 
 export const useLog = () => useStored<Record<string, DayLog>>('log', {});
@@ -137,7 +149,11 @@ export function logSession(minutes: number, completed: boolean) {
   const log = load<Record<string, DayLog>>('log', {});
   const today = todayKey();
   const prev = log[today];
-  save('log', { ...log, [today]: { minutes: (prev?.minutes ?? 0) + minutes, completed: completed || !!prev?.completed } });
+  const parts = { ...(prev?.parts ?? (prev?.minutes ? { prima: prev.minutes } : {})) };
+  const dev = deviceId();
+  parts[dev] = (parts[dev] ?? 0) + minutes;
+  const total = Object.values(parts).reduce((s, m) => s + m, 0);
+  save('log', { ...log, [today]: { minutes: total, completed: completed || !!prev?.completed, parts } });
 }
 
 /** I sette giorni della settimana corrente, da lunedì. */

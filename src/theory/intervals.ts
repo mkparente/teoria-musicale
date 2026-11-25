@@ -97,6 +97,24 @@ export const DEGREE_LABEL: Record<IntervalKey, string> = {
   m2: '♭2', M2: '2', m3: '♭3', M3: '3', P4: '4', A4: '♯4', d5: '♭5', P5: '5', m6: '♭6', M6: '6', m7: '♭7', M7: '7', P8: '8',
 };
 
+/** Con l'articolo determinativo: "la 3ª minore", "l’8ª giusta", "il tritono". */
+export function withArticle(name: string): string {
+  if (/^(8ª|unisono)/i.test(name)) return `l’${name}`;
+  if (/^tritono/i.test(name)) return `il ${name}`;
+  return `la ${name}`;
+}
+
+/** Con l'articolo indeterminativo: "una 3ª minore", "un’8ª giusta", "un tritono". */
+export function withIndefinite(name: string): string {
+  if (/^8ª/i.test(name)) return `un’${name}`;
+  if (/^(tritono|unisono)/i.test(name)) return `un ${name}`;
+  return `una ${name}`;
+}
+
+/** Solo l'articolo, con lo spazio se serve: per scriverlo prima di un nome in grassetto. */
+export const articleOf = (name: string) => withArticle(name).slice(0, -name.length);
+export const indefiniteOf = (name: string) => withIndefinite(name).slice(0, -name.length);
+
 export const semitoneWords = (n: number) => (n === 1 ? '1 semitono' : `${n} semitoni`);
 
 // ── Sul manico ──
@@ -130,6 +148,8 @@ export function shapeOffset(semis: number, kind: ShapeKind): number {
 /** Disegni comodi da suonare e da riconoscere: al massimo 3 tasti di spostamento tra corde diverse. */
 export function shapeUsable(semis: number, kind: ShapeKind): boolean {
   if (kind === 'same') return semis <= 7;
+  // Saltando una corda si contano dall'8ª: ha senso per 6ª, 7ª e 8ª, non per gli intervalli piccoli.
+  if ((kind === 'skip' || kind === 'skipB') && semis < 8) return false;
   return Math.abs(shapeOffset(semis, kind)) <= 3;
 }
 
@@ -146,6 +166,30 @@ export function shapeWords(semis: number, lower: GuitarString, upper: GuitarStri
   if (lower === upper) return `sulla stessa corda: ${semis} ${semis === 1 ? 'tasto' : 'tasti'} più su`;
   const offset = semis - openGap(lower, upper);
   return `dalla ${lower}ª alla ${upper}ª corda: ${offsetWords(offset)}`;
+}
+
+const fretCount = (n: number) => `${COUNT_WORDS[n] ?? n} ${n === 1 ? 'tasto' : 'tasti'}`;
+
+/** Il punto di riferimento da cui si conta un disegno: la 4ª sulla corda dopo, l'8ª due corde sopra. */
+export function referenceKey(shape: ShapeKind): 'P4' | 'P8' | null {
+  if (shape === 'same') return null;
+  return shape === 'next' || shape === 'nextB' ? 'P4' : 'P8';
+}
+
+/**
+ * Il disegno spiegato dal riferimento: "la 4ª è sulla corda dopo, allo stesso tasto; la 3ª minore è due tasti prima."
+ * Null sulla stessa corda, dove basta contare i tasti.
+ */
+export function referenceWords(semis: number, name: string, shape: ShapeKind, marked = false): string | null {
+  const key = referenceKey(shape);
+  if (!key) return null;
+  const d = shapeOffset(semitones(key), shape);
+  const where = d === 0 ? 'allo stesso tasto' : `${fretCount(Math.abs(d))} ${d > 0 ? 'avanti' : 'indietro'}`;
+  const ref = `${key === 'P4' ? 'la 4ª è sulla corda dopo' : 'l’8ª è due corde sopra'}, ${where}${marked ? ' (la nota tratteggiata)' : ''}`;
+  const from = semis - semitones(key);
+  const target = from === 0 ? 'è proprio il riferimento' : `${withArticle(name)} è ${fretCount(Math.abs(from))} ${from < 0 ? 'prima' : 'dopo'}`;
+  const b = shape === 'nextB' || shape === 'skipB' ? ' Attraverso la corda Si tutto si sposta di un tasto in avanti.' : '';
+  return `${ref}; ${target}.${b}`;
 }
 
 /** Il disegno più comodo da ricordare: stessa corda per i piccoli, dalla 6ª alla 5ª, poi dalla 6ª alla 4ª. */

@@ -66,6 +66,8 @@ export function recordGrade(id: string, grade: 'good' | 'hard' | 'again', ms: nu
 export function resetPrefix(prefix: string) {
   db = Object.fromEntries(Object.entries(db).filter(([k]) => !k.startsWith(prefix)));
   save(KEY, db);
+  // Traccia dell'azzeramento: la sincronizzazione non riporta gli elementi da un altro dispositivo.
+  save('srsResets', { ...load<Record<string, number>>('srsResets', {}), [prefix]: Date.now() });
 }
 
 export function reloadDb() {

@@ -13,6 +13,9 @@ import {
   shapeUsable,
   shapeWords,
   intervalSpots,
+  referenceWords,
+  withArticle,
+  withIndefinite,
 } from './intervals';
 import { type Note, type PitchClass, noteName, stackUp } from './notes';
 import { soundingMidi } from './guitar';
@@ -142,5 +145,29 @@ describe('mappa degli intervalli', () => {
             expect(s - p.string).toBeLessThanOrEqual(2);
             expect(soundingMidi(p) - soundingMidi({ string: s as 1, fret: f })).toBe(semis);
           }
+  });
+});
+
+describe('correzioni dai punti di riferimento', () => {
+  it("dalla 4ª sulla corda dopo e dall'8ª due corde sopra", () => {
+    expect(referenceWords(3, '3ª minore', 'next')).toBe('la 4ª è sulla corda dopo, allo stesso tasto; la 3ª minore è due tasti prima.');
+    expect(referenceWords(5, '4ª giusta', 'next')).toBe('la 4ª è sulla corda dopo, allo stesso tasto; è proprio il riferimento.');
+    expect(referenceWords(10, '7ª minore', 'skip')).toBe('l’8ª è due corde sopra, due tasti avanti; la 7ª minore è due tasti prima.');
+    expect(referenceWords(7, '5ª giusta', 'nextB')).toBe(
+      'la 4ª è sulla corda dopo, un tasto avanti; la 5ª giusta è due tasti dopo. Attraverso la corda Si tutto si sposta di un tasto in avanti.',
+    );
+    expect(referenceWords(3, '3ª minore', 'same')).toBeNull();
+  });
+});
+
+describe('articoli', () => {
+  it('il tritono, l’8ª, la 3ª', () => {
+    expect(withArticle('tritono')).toBe('il tritono');
+    expect(withArticle('8ª giusta')).toBe('l’8ª giusta');
+    expect(withArticle('3ª minore')).toBe('la 3ª minore');
+    expect(withIndefinite('8ª aumentata')).toBe('un’8ª aumentata');
+    expect(withIndefinite('tritono (4ª aumentata / 5ª diminuita)')).toBe('un tritono (4ª aumentata / 5ª diminuita)');
+    expect(withIndefinite('2ª aumentata')).toBe('una 2ª aumentata');
+    expect(referenceWords(6, 'tritono', 'next')).toBe('la 4ª è sulla corda dopo, allo stesso tasto; il tritono è un tasto dopo.');
   });
 });

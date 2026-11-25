@@ -23,7 +23,7 @@ export function load<T>(key: string, fallback: T): T {
 // ── Date di modifica, per la sincronizzazione ──
 
 /** Chiavi che restano su questo dispositivo: non vanno nel backup né online. */
-export const LOCAL_ONLY = new Set(['sync', '_updated']);
+export const LOCAL_ONLY = new Set(['sync', '_updated', 'device']);
 const UPDATED = '_updated';
 
 /** Quando è stata modificata l'ultima volta ogni chiave (ms). */

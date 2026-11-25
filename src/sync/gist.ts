@@ -35,6 +35,10 @@ async function call(f: Fetch, token: string, path: string, init: RequestInit = {
     throw new SyncError('Nessuna connessione: riprovo più tardi.', 'network');
   }
   if (res.status === 401) throw new SyncError('Il token non è valido o è scaduto.', 'auth');
+  // Troppe richieste: GitHub risponde 403 (o 429) ma il token va bene, si riprova più tardi.
+  if (res.status === 429 || (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0')) {
+    throw new SyncError('Troppe richieste a GitHub: riprovo più tardi.', 'network');
+  }
   if (res.status === 403) throw new SyncError(NO_SCOPE, 'auth');
   if (res.status === 404) throw new SyncError('Il Gist dei progressi non esiste più.', 'missing');
   if (!res.ok) throw new SyncError(`GitHub ha risposto con l'errore ${res.status}.`, 'other');
@@ -80,11 +84,14 @@ export async function readGist(token: string, id: string, f: Fetch = fetch): Pro
   let text = file.content ?? '';
   // Oltre 1 MB l'API tronca il contenuto: il file intero si scarica dal suo indirizzo.
   if (file.truncated && file.raw_url) {
+    let res: Response;
     try {
-      text = await (await f(file.raw_url)).text();
+      res = await f(file.raw_url);
     } catch {
       throw new SyncError('Nessuna connessione: riprovo più tardi.', 'network');
     }
+    if (!res.ok) throw new SyncError(`GitHub ha risposto con l'errore ${res.status}.`, 'other');
+    text = await res.text();
   }
   return parse(text);
 }
@@ -98,12 +105,13 @@ export async function writeGist(token: string, id: string, snapshot: Snapshot, f
 
 const serialize = (s: Snapshot) => JSON.stringify(s);
 
+/** Un file illeggibile non vale come "nessun progresso": sovrascriverlo cancellerebbe quelli dell'altro dispositivo. */
 function parse(text: string): Snapshot {
   try {
     const v = JSON.parse(text);
     if (v && v.version === 1 && v.data && v.updated) return v as Snapshot;
   } catch {
-    // file vuoto o rovinato: si riparte dai dati locali
+    // sotto
   }
-  return emptySnapshot();
+  throw new SyncError('Il file dei progressi online è illeggibile: non lo sovrascrivo. Salva un backup e scrivimi.', 'other');
 }

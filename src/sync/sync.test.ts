@@ -19,12 +19,13 @@ describe('fusione dei progressi', () => {
     expect(m.data.srs).toEqual({ a: item(4, 300) });
   });
 
-  it('registro: tempo più lungo del giorno, completata se lo è da una parte', () => {
+  it('registro di prima della sincronizzazione: tempo più lungo del giorno, completata se lo è da una parte', () => {
     const local = snap({ log: { '2026-11-24': { minutes: 20, completed: true }, '2026-11-25': { minutes: 5, completed: false } } });
     const remote = snap({ log: { '2026-11-25': { minutes: 15, completed: false }, '2026-11-20': { minutes: 10, completed: true } } });
+    // Giorni registrati prima della sincronizzazione (senza dispositivo): il tempo più lungo.
     expect(mergeSnapshots(local, remote).data.log).toEqual({
       '2026-11-24': { minutes: 20, completed: true },
-      '2026-11-25': { minutes: 15, completed: false },
+      '2026-11-25': { minutes: 15, completed: false, parts: { prima: 15 } },
       '2026-11-20': { minutes: 10, completed: true },
     });
   });
@@ -50,6 +51,29 @@ describe('fusione dei progressi', () => {
   it('un dispositivo nuovo riceve tutto', () => {
     const remote = snap({ srs: { a: item(3, 10) }, program: { done: ['u01'] } }, { srs: 10, program: 10 });
     expect(mergeSnapshots(emptySnapshot(), remote)).toEqual(remote);
+  });
+
+  it('sessione di oggi: un piano appena ricostruito non cancella i blocchi fatti altrove', () => {
+    const fatto = { date: '2026-11-25', results: [{}, {}], blocks: [1, 2, 3] };
+    const nuovo = { date: '2026-11-25', results: [], blocks: [1, 2, 3] };
+    const ieri = { date: '2026-11-24', results: [{}, {}, {}], blocks: [1, 2, 3] };
+    expect(mergeSnapshots(snap({ plan: nuovo }, { plan: 900 }), snap({ plan: fatto }, { plan: 100 })).data.plan).toEqual(fatto);
+    expect(mergeSnapshots(snap({ plan: nuovo }, { plan: 100 }), snap({ plan: ieri }, { plan: 900 })).data.plan).toEqual(nuovo);
+  });
+
+  it("un gruppo azzerato non torna dalla copia dell'altro dispositivo", () => {
+    const local = snap({ srs: {}, srsResets: { 'iv:': 500 } }, { srs: 500, srsResets: 500 });
+    const remote = snap({ srs: { 'iv:x': item(3, 400), 'iv:y': item(1, 600), 'sc:b': item(2, 100) } }, { srs: 600 });
+    expect(Object.keys(mergeSnapshots(local, remote).data.srs as object).sort()).toEqual(['iv:y', 'sc:b']);
+  });
+
+  it('registro: i minuti di due dispositivi nello stesso giorno si sommano', () => {
+    const a = snap({ log: { d: { minutes: 10, completed: false, parts: { A: 10 } } } });
+    const b = snap({ log: { d: { minutes: 15, completed: true, parts: { B: 15 } } } });
+    expect(mergeSnapshots(a, b).data.log).toEqual({ d: { minutes: 25, completed: true, parts: { A: 10, B: 15 } } });
+    // Lo stesso dispositivo da tutte e due le parti non si conta due volte.
+    const a2 = snap({ log: { d: { minutes: 20, completed: false, parts: { A: 20 } } } });
+    expect((mergeSnapshots(a2, a).data.log as Record<string, { minutes: number }>).d.minutes).toBe(20);
   });
 
   it('l\'ordine delle chiavi non conta nel confronto', () => {
@@ -99,9 +123,15 @@ describe('Gist dei progressi', () => {
     expect(await readGist('t', id, gh.f)).toEqual(s);
   });
 
-  it('un file vuoto o rovinato vale come nessun progresso', async () => {
+  it('un file rovinato è un errore, non "nessun progresso" (altrimenti lo si sovrascriverebbe)', async () => {
     const gh = fakeGitHub({ gists: { x: 'non è json' } });
-    expect(await readGist('t', 'x', gh.f)).toEqual(emptySnapshot());
+    await expect(readGist('t', 'x', gh.f)).rejects.toMatchObject({ kind: 'other' });
+  });
+
+  it('il limite di richieste di GitHub non blocca il token', async () => {
+    const limited = (async () =>
+      new Response('{}', { status: 403, headers: { 'x-ratelimit-remaining': '0' } })) as typeof fetch;
+    await expect(readGist('t', 'x', limited)).rejects.toMatchObject({ kind: 'network' });
   });
 
   it('errori comprensibili per token sbagliato, permesso mancante e Gist cancellato', async () => {
