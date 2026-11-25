@@ -18,6 +18,17 @@ export function SessionRunner() {
   const [between, setBetween] = useState<BlockResult | null>(null);
   const [guitarDone, setGuitarDone] = useState(false);
   const [now, setNow] = useState(Date.now());
+  // Pausa durante le correzioni: il tempo passato a leggerle non si toglie al blocco.
+  const [pausedTotal, setPausedTotal] = useState(0);
+  const [pausedSince, setPausedSince] = useState<number | null>(null);
+  const onPause = (paused: boolean) => {
+    const t = Date.now();
+    if (paused) setPausedSince(t);
+    else if (pausedSince !== null) {
+      setPausedTotal((p) => p + t - pausedSince);
+      setPausedSince(null);
+    }
+  };
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 1000);
@@ -45,7 +56,12 @@ export function SessionRunner() {
     setBetween(null);
     setGuitarDone(false);
     setStartedAt(Date.now());
+    setPausedTotal(0);
+    setPausedSince(null);
   };
+
+  // Tempo che resta nel blocco: fermo mentre la correzione è sullo schermo.
+  const remaining = block ? startedAt + block.minutes * 60000 + pausedTotal - (pausedSince ?? now) : 0;
 
   const header = (
     <header class="run-head">
@@ -58,8 +74,12 @@ export function SessionRunner() {
         ))}
       </div>
       {block && !between && block.type === 'quiz' && (
-        <span class={`run-timer ${startedAt + block.minutes * 60000 - now <= 0 ? 'over' : ''}`}>
-          {mmss(startedAt + block.minutes * 60000 - now)}
+        <span
+          class={`run-timer ${remaining <= 0 ? 'over' : ''} ${pausedSince !== null ? 'paused' : ''}`}
+          title={pausedSince !== null ? 'In pausa mentre leggi la correzione' : undefined}
+        >
+          {pausedSince !== null && <span aria-hidden="true">⏸ </span>}
+          {mmss(remaining)}
         </span>
       )}
     </header>
@@ -127,6 +147,7 @@ export function SessionRunner() {
               endsAt={startedAt + block.minutes * 60000}
               maxQuestions={block.maxQuestions}
               onEnd={(s) => finishBlock({ answered: s.done, correct: s.correct })}
+              onPause={onPause}
             />
           );
         })()

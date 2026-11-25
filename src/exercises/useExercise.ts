@@ -27,6 +27,11 @@ export interface ExerciseProps<C> {
   maxQuestions?: number;
   /** Chiamata quando il blocco finisce. Se c'è, l'esercizio è incorporato in una sessione. */
   onEnd?: (s: Session) => void;
+  /**
+   * Avvisa quando la correzione è sullo schermo (true) e quando si va avanti (false): il tempo
+   * passato a leggerla non conta nel blocco, e la sessione ferma il suo orologio.
+   */
+  onPause?: (paused: boolean) => void;
   /** Titolo e pagina di ritorno, quando l'esercizio si apre da un'attività del programma. */
   title?: string;
   back?: string;
@@ -51,7 +56,7 @@ export function useExercise<Q>(
   buildPool: () => string[],
   make: (id: string) => Q,
   configKey: string,
-  run: Pick<ExerciseProps<unknown>, 'pool' | 'endsAt' | 'maxQuestions' | 'onEnd'> = {},
+  run: Pick<ExerciseProps<unknown>, 'pool' | 'endsAt' | 'maxQuestions' | 'onEnd' | 'onPause'> = {},
 ) {
   const [settings] = useSettings();
   const pool = useMemo(() => run.pool ?? buildPool(), [configKey, run.pool?.join(',')]);
@@ -63,11 +68,21 @@ export function useExercise<Q>(
   const sessionRef = useRef(session);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
+  // Tempo passato sulle correzioni: sposta in avanti la fine del blocco.
+  const pausedMs = useRef(0);
+  const pausedSince = useRef<number | null>(null);
+  const onPause = useRef(run.onPause);
+  onPause.current = run.onPause;
 
   const next = () => {
     clearTimeout(timer.current);
+    if (pausedSince.current !== null) {
+      pausedMs.current += Date.now() - pausedSince.current;
+      pausedSince.current = null;
+      onPause.current?.(false);
+    }
     const s = sessionRef.current;
-    const over = (run.maxQuestions && s.done >= run.maxQuestions) || (run.endsAt && Date.now() >= run.endsAt);
+    const over = (run.maxQuestions && s.done >= run.maxQuestions) || (run.endsAt && Date.now() >= run.endsAt + pausedMs.current);
     if (over && s.done > 0) {
       run.onEnd?.(s);
       return;
@@ -97,6 +112,8 @@ export function useExercise<Q>(
     const ms = performance.now() - current.start;
     record(current.id, correct, ms);
     setOutcome({ correct, ms });
+    pausedSince.current = Date.now();
+    onPause.current?.(true);
     const s = sessionRef.current;
     sessionRef.current = { done: s.done + 1, correct: s.correct + (correct ? 1 : 0), streak: correct ? s.streak + 1 : 0 };
     setSession(sessionRef.current);

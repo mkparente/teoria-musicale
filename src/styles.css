@@ -913,6 +913,9 @@ a.secondary {
 .run-timer.over {
   color: var(--gold);
 }
+.run-timer.paused {
+  color: var(--muted);
+}
 .run-title {
   display: flex;
   flex-direction: column;
