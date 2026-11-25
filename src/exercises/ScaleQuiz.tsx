@@ -1,12 +1,15 @@
 import { useState } from 'preact/hooks';
 import { useHeardNotes } from '../audio/mic';
 import { MicPanel, heardToPc } from '../components/MicPanel';
+import { FretHint } from '../components/FretHint';
+import type { FretMark } from '../components/Fretboard';
+import { SEMI_DEGREE, scaleInPosition } from '../theory/hints';
 import { Choices, NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
 import { Staff } from '../components/Staff';
 import { useSettings } from '../store';
 import { tiered } from '../srs/srs';
-import { type Naming, type PitchClass, enharmonic, noteName, parsePcKey, pcKey, samePitchClass } from '../theory/notes';
+import { type Naming, type PitchClass, enharmonic, midi, noteName, parsePcKey, pcKey, pitchClass, samePitchClass } from '../theory/notes';
 import {
   type Mode,
   type ScaleType,
@@ -231,6 +234,7 @@ function QuestionView({ q, outcome, finish, next }: ViewProps) {
             {degreeFunction(q.type, q.d)}).
           </p>
           <ScaleExplain tonic={q.tonic} type={q.type} highlight={q.d} />
+          <ScaleHint tonic={q.tonic} type={q.type} highlight={q.d} />
         </Feedback>
       </div>
     );
@@ -357,6 +361,28 @@ export function ScaleExplain({ tonic, type, highlight }: { tonic: PitchClass; ty
         </>
       )}
     </div>
+  );
+}
+
+/** La scala in una posizione sul manico: tonica e grado chiesto in evidenza, le altre note piccole. */
+function ScaleHint({ tonic, type, highlight }: { tonic: PitchClass; type: ScaleType; highlight: number }) {
+  const notes = scaleNotes(tonic, type, 4);
+  const offsets = notes.map((n) => midi(n) - midi(notes[0]));
+  const placed = scaleInPosition(pitchClass(tonic), offsets);
+  const last = notes.length - 1;
+  const marks: FretMark[] = placed.notes.map((pos, i) => ({
+    pos,
+    kind: i === 0 || i === last ? 'root' : i === highlight ? 'note' : 'other',
+    label: SEMI_DEGREE[offsets[i]],
+  }));
+  const root = placed.notes[0];
+  return (
+    <FretHint
+      marks={marks}
+      from={placed.from}
+      to={placed.to}
+      caption={`Tonica sulla ${root.string}ª corda, ${root.fret === 0 ? 'a vuoto' : `tasto ${root.fret}`}: la scala in una posizione, fino all'ottava.`}
+    />
   );
 }
 

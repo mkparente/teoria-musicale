@@ -1,6 +1,8 @@
 import { useState } from 'preact/hooks';
 import { useHeardNotes } from '../audio/mic';
 import { MicPanel, heardToPc } from '../components/MicPanel';
+import { FretHint } from '../components/FretHint';
+import { intervalInPosition } from '../theory/hints';
 import { type FretMark, Fretboard } from '../components/Fretboard';
 import { Choices, NotePicker, type PickMark } from '../components/NotePicker';
 import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
@@ -42,6 +44,7 @@ import {
   noteName,
   parsePcKey,
   pcKey,
+  pitchClass,
   samePitchClass,
   stackUp,
 } from '../theory/notes';
@@ -279,9 +282,27 @@ function NameView({ q, config, outcome, finish, next }: ViewProps & { q: Extract
           <p>4ª aumentata e 5ª diminuita suonano uguali (il tritono): decide la lettera della nota acuta.</p>
         )}
         <p class="tip">{tipFor(q.iv)}</p>
+        <IntervalHint iv={q.iv} root={q.root} />
       </Feedback>
     </div>
   );
+}
+
+/** L'intervallo nel suo disegno principale sul manico, con il riferimento (4ª o 8ª) tratteggiato. */
+function IntervalHint({ iv, root }: { iv: IntervalKey; root: PitchClass }) {
+  const semis = semitones(iv);
+  const placed = intervalInPosition(pitchClass(root), semis);
+  const [lower, upper] = placed.notes;
+  const shape: ShapeKind = lower.string === upper.string ? 'same' : lower.string - upper.string === 1 ? 'next' : 'skip';
+  const ref = reference({ shape, lower, upper });
+  const marks: FretMark[] = [
+    { pos: lower, kind: 'root', label: '1' },
+    ...(ref && ref.pos.fret !== upper.fret ? [{ pos: ref.pos, kind: 'hint' as const, label: DEGREE_LABEL[ref.key] }] : []),
+    { pos: upper, kind: 'note', label: DEGREE_LABEL[iv] },
+  ];
+  const from = Math.max(0, Math.min(placed.from, ...(ref ? [ref.pos.fret - 1] : [])));
+  const to = Math.max(placed.to, ...(ref ? [ref.pos.fret + 1] : []));
+  return <FretHint marks={marks} from={from <= 1 ? 0 : from} to={to} caption={capitalize(shapeWords(semis, lower.string, upper.string)) + '.'} />;
 }
 
 function BuildView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { kind: 'build' }> }) {
@@ -336,6 +357,7 @@ function BuildView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { k
           </p>
         )}
         <p class="tip">{tipFor(q.iv)}</p>
+        <IntervalHint iv={q.iv} root={q.root} />
       </Feedback>
     </div>
   );

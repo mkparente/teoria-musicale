@@ -72,6 +72,15 @@ export function SettingsPage() {
           value={settings.autoAdvance ? 'auto' : 'manual'}
           onChange={(v) => setSettings({ ...settings, autoAdvance: v === 'auto' })}
         />
+        <Radio
+          label="Nelle correzioni di gradi e intervalli"
+          options={[
+            { value: 'yes', label: 'Mostra anche sul manico' },
+            { value: 'no', label: 'Solo la teoria' },
+          ]}
+          value={settings.fretHints ? 'yes' : 'no'}
+          onChange={(v) => setSettings({ ...settings, fretHints: v === 'yes' })}
+        />
       </section>
       <OnlineSync />
       <section class="panel">

@@ -19,13 +19,15 @@ interface Props {
   focusString?: GuitarString;
   /** Zona del manico da evidenziare, dal tasto `lo` al tasto `hi` compresi. */
   region?: { lo: number; hi: number };
+  /** Primo tasto mostrato: con `from` > 1 si vede solo una finestra del manico (da `from` a `maxFret`). */
+  from?: number;
 }
 
 /**
  * Manico disegnato in SVG. Orizzontale sugli schermi larghi (cantino in alto, come nelle tab),
  * verticale sul telefono (Mi basso a sinistra, capotasto in alto, come nei diagrammi degli accordi).
  */
-export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS, focusString, region }: Props) {
+export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS, focusString, region, from = 0 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const width = useWidth(ref);
   const vertical = width > 0 && width < 560;
@@ -38,7 +40,11 @@ export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS,
   const lines: number[] = [g.open];
   for (let f = 1; f <= maxFret; f++) lines.push(lines[f - 1] + g.fret * Math.pow(g.decay, f - 1));
   const center = (f: number) => (f === 0 ? g.open / 2 : (lines[f - 1] + lines[f]) / 2);
-  const length = lines[maxFret] + 10;
+  // Finestra: il tasto prima di `from` prende il posto del capotasto, il resto si sposta indietro.
+  const windowed = from > 1;
+  const shift = windowed ? lines[from - 1] - g.open : 0;
+  const length = lines[maxFret] - shift + 10;
+  const shown = (f: number) => f <= maxFret && (!windowed || f >= from);
 
   // Posizioni trasversali.
   const idx = (s: GuitarString) => (vertical ? 6 - s : s - 1);
@@ -63,6 +69,7 @@ export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS,
     <div class="fretboard" ref={ref}>
       {width > 0 && (
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Manico della chitarra">
+          <g transform={vertical ? `translate(0 ${-shift})` : `translate(${-shift} 0)`}>
           {region &&
             (() => {
               const a0 = region.lo === 0 ? 0 : lines[region.lo - 1];
@@ -72,24 +79,26 @@ export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS,
               return <rect x={p.x} y={p.y} {...size} class="fb-region" rx={6} />;
             })()}
           {/* pallini */}
-          {INLAYS.filter((f) => f <= maxFret).map((f) => {
+          {INLAYS.filter(shown).map((f) => {
             const p = pt(center(f), inlayAcross);
             return <circle key={`i${f}`} cx={p.x} cy={p.y} r={5} class="fb-inlay" />;
           })}
-          {DOUBLE_INLAYS.filter((f) => f <= maxFret).flatMap((f) =>
+          {DOUBLE_INLAYS.filter(shown).flatMap((f) =>
             [acrossMid(across(2), across(3)), acrossMid(across(4), across(5))].map((c, i) => {
               const p = pt(center(f), c);
               return <circle key={`d${f}${i}`} cx={p.x} cy={p.y} r={5} class="fb-inlay" />;
             }),
           )}
           {/* tasti e capotasto */}
-          {lines.map((a, f) => line(a, first, a, last, f === 0 ? 'fb-nut' : 'fb-fret', f === 0 ? 5 : 1.5, `f${f}`))}
+          {lines.map((a, f) =>
+            windowed && f < from - 1 ? null : line(a, first, a, last, f === 0 ? 'fb-nut' : 'fb-fret', f === 0 ? 5 : 1.5, `f${f}`),
+          )}
           {/* corde */}
           {STRINGS.map((s) =>
             line(
-              2,
+              windowed ? shift + 2 : 2,
               across(s),
-              length,
+              shift + length,
               across(s),
               `fb-string ${activeStrings.includes(s) ? '' : 'fb-dim'} ${focusString === s ? 'fb-focus' : ''}`,
               focusString === s ? 3.2 : 0.8 + (s - 1) * 0.35,
@@ -97,8 +106,9 @@ export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS,
             ),
           )}
           {/* numeri dei tasti */}
-          {[...INLAYS, ...DOUBLE_INLAYS]
-            .filter((f) => f <= maxFret)
+          {/* Nella finestra si numera anche il primo tasto, per sapere dove si è. */}
+          {[...new Set([...(windowed ? [from] : []), ...INLAYS, ...DOUBLE_INLAYS])]
+            .filter(shown)
             .map((f) => {
               const p = pt(center(f), labelAt);
               return (
@@ -132,7 +142,7 @@ export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS,
               }),
             )}
           {/* segni */}
-          {marks.map((m, i) => {
+          {marks.filter((m) => shown(m.pos.fret) || (m.pos.fret === 0 && !windowed)).map((m, i) => {
             const p = pt(center(m.pos.fret), across(m.pos.string));
             return (
               <g key={`m${i}`} class={`fb-mark fb-${m.kind}`}>
@@ -145,6 +155,7 @@ export function Fretboard({ maxFret, marks = [], onTap, activeStrings = STRINGS,
               </g>
             );
           })}
+          </g>
         </svg>
       )}
     </div>

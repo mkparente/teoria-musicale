@@ -1315,3 +1315,16 @@ a.secondary {
   font-size: 0.9rem;
   color: var(--fg);
 }
+
+/* Il manico nelle correzioni */
+.fret-hint {
+  margin-top: 6px;
+}
+.fret-hint .fretboard {
+  max-width: 420px;
+  margin: 0 auto;
+}
+.fret-hint .hint {
+  margin-top: 4px;
+  text-align: center;
+}

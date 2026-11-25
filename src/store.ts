@@ -89,9 +89,11 @@ export interface Settings {
   sessionMinutes: number;
   /** Falso quando sei in viaggio senza strumento: la sessione salta le attività con la chitarra. */
   withGuitar: boolean;
+  /** Nelle correzioni di gradi e intervalli mostra anche dove stanno le note sul manico. */
+  fretHints: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { naming: 'it', autoAdvance: true, sessionMinutes: 20, withGuitar: true };
+export const DEFAULT_SETTINGS: Settings = { naming: 'it', autoAdvance: true, sessionMinutes: 20, withGuitar: true, fretHints: true };
 
 export const useSettings = () => useStored<Settings>('settings', DEFAULT_SETTINGS);
 
