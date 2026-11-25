@@ -7,7 +7,7 @@ import { Feedback, Radio, Shell, Toggles } from '../components/Shell';
 import { Staff } from '../components/Staff';
 import { useSettings } from '../store';
 import { tiered } from '../srs/srs';
-import { type FretPos, semitoneAt } from '../theory/guitar';
+import { type FretPos, samePos, semitoneAt, soundingMidi } from '../theory/guitar';
 import {
   type IntervalKey,
   type ShapeKind,
@@ -41,7 +41,7 @@ import {
 } from '../theory/notes';
 import { type ExerciseProps, type Outcome, useExercise, useExerciseConfig } from './useExercise';
 
-type Kind = 'name' | 'build' | 'fret';
+type Kind = 'name' | 'build' | 'fret' | 'find';
 /** Intervalli selezionabili: il tritono è uno solo, sul rigo si scrive come 4ª aumentata o 5ª diminuita. */
 type Choice = Exclude<IntervalKey, 'A4' | 'd5'> | 'TT';
 
@@ -49,6 +49,7 @@ const KINDS: { value: Kind; label: string }[] = [
   { value: 'name', label: 'Che intervallo è' },
   { value: 'build', label: 'Costruisci l’intervallo' },
   { value: 'fret', label: 'Sul manico' },
+  { value: 'find', label: 'Trova sul manico' },
 ];
 
 /** Ordine di studio pensato per il blues: prima gli intervalli degli accordi, poi quelli della pentatonica, poi gli altri. */
@@ -72,7 +73,7 @@ interface Config {
   altered: boolean;
 }
 
-export const DEFAULT: Config = { kinds: ['name', 'build', 'fret'], intervals: [...CHOICES], altered: false };
+export const DEFAULT: Config = { kinds: ['name', 'build', 'fret', 'find'], intervals: [...CHOICES], altered: false };
 
 export const PREFIX = 'iv:';
 
@@ -81,9 +82,11 @@ const NATURAL_ROOTS = [0, 1, 2, 3, 4, 5, 6].map((l) => p(l));
 const ALTERED_ROOTS = [p(6, -1), p(2, -1), p(5, -1), p(1, -1), p(3, 1), p(0, 1)];
 
 const SHAPE_LATE: ShapeKind[] = ['nextB', 'skipB'];
+/** "Trova sul manico": prima la stessa corda, poi la corda successiva, poi saltandone una, per ultimo attraverso la corda Si. */
+const FIND_RANK: Record<ShapeKind, number> = { same: 0, next: 1, skip: 2, nextB: 3, skipB: 3 };
 
 export function buildPool(c: Config): string[] {
-  const tiers: string[][] = Array.from({ length: 9 }, () => []);
+  const tiers: string[][] = Array.from({ length: 12 }, () => []);
   for (const choice of CHOICES.filter((x) => c.intervals.includes(x))) {
     const g = groupOf(choice);
     for (const key of keysOf(choice)) {
@@ -101,6 +104,11 @@ export function buildPool(c: Config): string[] {
         tiers[g + (SHAPE_LATE.includes(shape) ? 3 : 0)].push(`${PREFIX}fret:${choice}:${shape}`);
       }
     }
+    if (c.kinds.includes('find')) {
+      for (const shape of SHAPE_KINDS.filter((s) => shapeUsable(choiceSemis(choice), s))) {
+        tiers[g * 4 + FIND_RANK[shape]].push(`${PREFIX}find:${choice}:${shape}`);
+      }
+    }
   }
   return tiered(tiers);
 }
@@ -108,7 +116,7 @@ export function buildPool(c: Config): string[] {
 type Q =
   | { kind: 'name'; iv: IntervalKey; root: PitchClass }
   | { kind: 'build'; iv: IntervalKey; root: PitchClass }
-  | { kind: 'fret'; choice: Choice; shape: ShapeKind; lower: FretPos; upper: FretPos };
+  | { kind: 'fret' | 'find'; choice: Choice; shape: ShapeKind; lower: FretPos; upper: FretPos };
 
 /** Tasti mostrati nelle domande sul manico. */
 const FRETS = 9;
@@ -124,7 +132,7 @@ function parse(id: string): Q {
   // Nota grave dal 1° tasto in su, nota acuta dentro i tasti mostrati.
   const frets = Array.from({ length: FRETS }, (_, i) => i + 1).filter((f) => f + offset >= 0 && f + offset <= FRETS);
   const f = pick(frets);
-  return { kind: 'fret', choice, shape, lower: { string: ls, fret: f }, upper: { string: us, fret: f + offset } };
+  return { kind: kind as 'fret' | 'find', choice, shape, lower: { string: ls, fret: f }, upper: { string: us, fret: f + offset } };
 }
 
 const SHAPE_WORDS: Record<ShapeKind, string> = {
@@ -138,6 +146,7 @@ const SHAPE_WORDS: Record<ShapeKind, string> = {
 export function describe(id: string, naming: Naming): string {
   const [kind, a, b] = id.slice(PREFIX.length).split(':');
   if (kind === 'fret') return `${choiceName(a as Choice)} sul manico, ${SHAPE_WORDS[b as ShapeKind]}`;
+  if (kind === 'find') return `trovare la ${choiceName(a as Choice)} ${SHAPE_WORDS[b as ShapeKind]}`;
   const key = a as IntervalKey;
   const root = parsePcKey(b);
   if (kind === 'name') return `riconoscere ${noteName(root, naming)} – ${noteName(noteAbove(root, key), naming)}`;
@@ -218,6 +227,7 @@ function QuestionView(props: ViewProps) {
   const { q } = props;
   if (q.kind === 'name') return <NameView {...props} q={q} />;
   if (q.kind === 'build') return <BuildView {...props} q={q} />;
+  if (q.kind === 'find') return <FindView {...props} q={q} />;
   return <FretView {...props} q={q} />;
 }
 
@@ -331,7 +341,7 @@ function exampleNames(lower: FretPos, choice: Choice, naming: Naming): string | 
   return null;
 }
 
-function FretView({ q, config, outcome, finish, next }: ViewProps & { q: Extract<Q, { kind: 'fret' }> }) {
+function FretView({ q, config, outcome, finish, next }: ViewProps & { q: Extract<Q, { shape: ShapeKind }> }) {
   const [{ naming }] = useSettings();
   const [picked, setPicked] = useState<Choice | null>(null);
   const semis = choiceSemis(q.choice);
@@ -371,6 +381,88 @@ function FretView({ q, config, outcome, finish, next }: ViewProps & { q: Extract
           <p>Tra la corda Sol e la corda Si ci sono 4 semitoni invece di 5: attraversandole il disegno si sposta di un tasto in avanti.</p>
         )}
         <p class="tip">{tipFor(tipKey, q.choice === 'TT' ? 'Tritono' : undefined)}</p>
+      </Feedback>
+    </div>
+  );
+}
+
+/** Grado e nome di una distanza in semitoni sopra la fondamentale (dentro l'ottava). */
+const SEMI_DEGREE = ['1', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7', '8'];
+const SEMI_CHOICE: (Choice | null)[] = [null, 'm2', 'M2', 'm3', 'M3', 'P4', 'TT', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'];
+const COUNT = ['', 'un', 'due', 'tre', 'quattro', 'cinque', 'sei', 'sette'];
+const frets = (n: number) => `${COUNT[n] ?? n} ${n === 1 ? 'tasto' : 'tasti'}`;
+const shortName = (c: Choice) => choiceName(c).split(' (')[0];
+
+/** Il punto di riferimento da cui si conta il disegno: la 4ª sulla corda dopo, l'8ª due corde sopra. */
+function reference(q: { shape: ShapeKind; lower: FretPos; upper: FretPos }): { key: 'P4' | 'P8'; pos: FretPos } | null {
+  if (q.shape === 'same') return null;
+  const key = q.shape === 'next' || q.shape === 'nextB' ? 'P4' : 'P8';
+  return { key, pos: { string: q.upper.string, fret: q.lower.fret + shapeOffset(semitones(key), q.shape) } };
+}
+
+/** Correzione che ragiona dal riferimento: "la 4ª è allo stesso tasto; la 3ª minore è due tasti prima". */
+export function referenceTip(q: { choice: Choice; shape: ShapeKind; lower: FretPos; upper: FretPos }): string | null {
+  const ref = reference(q);
+  if (!ref) return null;
+  const d = ref.pos.fret - q.lower.fret;
+  const where = d === 0 ? 'allo stesso tasto' : `${frets(Math.abs(d))} ${d > 0 ? 'avanti' : 'indietro'}`;
+  const refName = ref.key === 'P4' ? 'la 4ª è sulla corda dopo' : 'l’8ª è due corde sopra';
+  const from = choiceSemis(q.choice) - semitones(ref.key);
+  const target =
+    from === 0 ? `la ${shortName(q.choice)} è proprio il riferimento` : `la ${shortName(q.choice)} è ${frets(Math.abs(from))} ${from < 0 ? 'prima' : 'dopo'}`;
+  const b = q.shape === 'nextB' || q.shape === 'skipB' ? ' Attraverso la corda Si tutto si sposta di un tasto in avanti.' : '';
+  return `Riferimento: ${refName}, ${where} (la nota tratteggiata); ${target}.${b}`;
+}
+
+function FindView({ q, outcome, finish, next }: ViewProps & { q: Extract<Q, { shape: ShapeKind }> }) {
+  const [tapped, setTapped] = useState<FretPos | null>(null);
+  const semis = choiceSemis(q.choice);
+  const name = shortName(q.choice);
+  const answer = (pos: FretPos) => {
+    if (outcome) return;
+    setTapped(pos);
+    finish(samePos(pos, q.upper));
+  };
+  // Suonata: si suppone che sia sulla corda evidenziata, così si sa il tasto. La fondamentale suonata per prima non conta.
+  useHeardNotes((midi) => {
+    if (midi === soundingMidi(q.lower)) return;
+    answer({ string: q.upper.string, fret: midi - soundingMidi({ string: q.upper.string, fret: 0 }) });
+  }, !outcome);
+
+  const ref = reference(q);
+  const tappedSemis = tapped ? soundingMidi(tapped) - soundingMidi(q.lower) : -1;
+  const inOctave = tappedSemis >= 0 && tappedSemis <= 12;
+  const wrong = !!tapped && !samePos(tapped, q.upper);
+  const visible = (pos: FretPos) => pos.fret >= 0 && pos.fret <= FRETS;
+  const marks: FretMark[] = [{ pos: q.lower, kind: 'root', label: '1' }];
+  if (outcome && ref && !samePos(ref.pos, q.upper) && !(tapped && samePos(ref.pos, tapped)) && visible(ref.pos)) marks.push({ pos: ref.pos, kind: 'hint', label: DEGREE_LABEL[ref.key] });
+  if (wrong && visible(tapped)) marks.push({ pos: tapped, kind: 'bad', label: inOctave ? SEMI_DEGREE[tappedSemis] : '✗' });
+  if (outcome) marks.push({ pos: q.upper, kind: 'ok', label: q.choice === 'TT' ? '♭5' : DEGREE_LABEL[q.choice] });
+
+  const found = !inOctave ? null : tappedSemis === 0 ? 'la fondamentale stessa' : `la ${shortName(SEMI_CHOICE[tappedSemis]!)} (${semitoneWords(tappedSemis)})`;
+  const tip = referenceTip(q);
+
+  return (
+    <div class="question">
+      <p class="prompt">
+        Tocca la <b>{name}</b> sopra la nota <b>1</b>,{' '}
+        {q.shape === 'same' ? (
+          'sulla stessa corda'
+        ) : (
+          <>
+            sulla <b>{q.upper.string}ª corda</b>
+          </>
+        )}
+        .
+      </p>
+      <Fretboard maxFret={FRETS} marks={marks} focusString={q.upper.string} onTap={answer} />
+      <MicPanel hint="suona la nota sulla corda evidenziata" />
+      <Feedback outcome={outcome} onNext={next}>
+        {wrong && <p>{found ? `Hai trovato ${found}.` : 'Quella nota è fuori dall’ottava sopra la fondamentale.'}</p>}
+        <p>
+          {capitalize(name)} ({semitoneWords(semis)}), {shapeWords(semis, q.lower.string, q.upper.string)}.
+        </p>
+        {tip && <p class="tip">{tip}</p>}
       </Feedback>
     </div>
   );

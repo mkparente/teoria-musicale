@@ -188,6 +188,7 @@ export const UNITS: Unit[] = [
     activities: [
       { type: 'quiz', exercise: 'intervalli', title: 'Riconosci e costruisci gli intervalli', config: { kinds: ['name', 'build'], altered: false } },
       { type: 'quiz', exercise: 'intervalli', title: 'Gli intervalli sul manico', config: { kinds: ['fret'] } },
+      { type: 'quiz', exercise: 'intervalli', title: 'Trova gli intervalli sul manico', config: { kinds: ['find'] } },
       {
         type: 'guitar',
         id: 'u04-forme',
