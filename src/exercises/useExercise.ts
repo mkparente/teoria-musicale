@@ -126,8 +126,8 @@ export function useExercise<Q>(
     const s = sessionRef.current;
     sessionRef.current = { done: s.done + 1, correct: s.correct + (correct ? 1 : 0), streak: correct ? s.streak + 1 : 0 };
     setSession(sessionRef.current);
-    // Giusta ma lenta: si resta sulla correzione, così si legge perché torna presto.
-    if (correct && !slow && settings.autoAdvance) timer.current = window.setTimeout(next, 1100);
+    // Giusta, rapida o lenta: stesso comportamento, la velocità non si mostra durante l'esercizio.
+    if (correct && settings.autoAdvance) timer.current = window.setTimeout(next, 1100);
   };
 
   return { pool, current, outcome, session, error, next, finish, embedded: !!run.onEnd };
