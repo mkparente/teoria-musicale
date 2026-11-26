@@ -185,11 +185,13 @@ export function referenceWords(semis: number, name: string, shape: ShapeKind, ma
   if (!key) return null;
   const d = shapeOffset(semitones(key), shape);
   const where = d === 0 ? 'allo stesso tasto' : `${fretCount(Math.abs(d))} ${d > 0 ? 'avanti' : 'indietro'}`;
-  const ref = `${key === 'P4' ? 'la 4ª è sulla corda dopo' : 'l’8ª è due corde sopra'}, ${where}${marked ? ' (la nota tratteggiata)' : ''}`;
   const from = semis - semitones(key);
-  const target = from === 0 ? 'è proprio il riferimento' : `${withArticle(name)} è ${fretCount(Math.abs(from))} ${from < 0 ? 'prima' : 'dopo'}`;
   const b = shape === 'nextB' || shape === 'skipB' ? ' Attraverso la corda Si tutto si sposta di un tasto in avanti.' : '';
-  return `${ref}; ${target}.${b}`;
+  const refText = `${key === 'P4' ? 'la 4ª è sulla corda dopo' : 'l’8ª è due corde sopra'}, ${where}`;
+  // Se l'intervallo è il riferimento stesso non c'è niente di tratteggiato da indicare.
+  if (from === 0) return `${refText}: è proprio questa.${b}`;
+  const target = `${withArticle(name)} è ${fretCount(Math.abs(from))} ${from < 0 ? 'prima' : 'dopo'}`;
+  return `${refText}${marked ? ' (la nota tratteggiata)' : ''}; ${target}.${b}`;
 }
 
 /** Il disegno più comodo da ricordare: stessa corda per i piccoli, dalla 6ª alla 5ª, poi dalla 6ª alla 4ª. */

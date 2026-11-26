@@ -151,7 +151,11 @@ describe('mappa degli intervalli', () => {
 describe('correzioni dai punti di riferimento', () => {
   it("dalla 4ª sulla corda dopo e dall'8ª due corde sopra", () => {
     expect(referenceWords(3, '3ª minore', 'next')).toBe('la 4ª è sulla corda dopo, allo stesso tasto; la 3ª minore è due tasti prima.');
-    expect(referenceWords(5, '4ª giusta', 'next')).toBe('la 4ª è sulla corda dopo, allo stesso tasto; è proprio il riferimento.');
+    expect(referenceWords(5, '4ª giusta', 'next')).toBe('la 4ª è sulla corda dopo, allo stesso tasto: è proprio questa.');
+    // Il caso dello screenshot: 8ª dalla 3ª alla 1ª corda. Niente "(la nota tratteggiata)", che non c'è.
+    expect(referenceWords(12, '8ª giusta', 'skipB', true)).toBe(
+      'l’8ª è due corde sopra, tre tasti avanti: è proprio questa. Attraverso la corda Si tutto si sposta di un tasto in avanti.',
+    );
     expect(referenceWords(10, '7ª minore', 'skip')).toBe('l’8ª è due corde sopra, due tasti avanti; la 7ª minore è due tasti prima.');
     expect(referenceWords(7, '5ª giusta', 'nextB')).toBe(
       'la 4ª è sulla corda dopo, un tasto avanti; la 5ª giusta è due tasti dopo. Attraverso la corda Si tutto si sposta di un tasto in avanti.',
